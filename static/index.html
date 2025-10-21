@@ -86,7 +86,7 @@
         
         /* Sidebar - Sticky (not overlay) */
         .sidebar {
-            width: 280px;
+            width: clamp(260px, 20vw, 280px);
             height: 100vh;
             background: var(--sidebar-bg);
             border-right: 1px solid var(--border);
@@ -106,12 +106,12 @@
         }
         
         .sidebar-header {
-            padding: 20px 16px;
+            padding: clamp(16px, 2vh, 20px) 16px;
             border-bottom: 1px solid var(--border);
         }
         
         .logo {
-            font-size: 18px;
+            font-size: clamp(16px, 1.5vw, 18px);
             font-weight: 600;
             color: var(--text-primary);
             letter-spacing: -0.3px;
@@ -178,6 +178,10 @@
             cursor: pointer;
             transition: all 0.15s ease;
             border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
         }
         
         .session-item:hover {
@@ -188,6 +192,11 @@
         .session-item.active {
             background: var(--bg-secondary);
             border-color: var(--border);
+        }
+        
+        .session-content {
+            flex: 1;
+            min-width: 0;
         }
         
         .session-title {
@@ -203,6 +212,31 @@
         .session-time {
             font-size: 11px;
             color: var(--text-secondary);
+        }
+        
+        .delete-session-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            opacity: 0;
+            flex-shrink: 0;
+        }
+        
+        .session-item:hover .delete-session-btn {
+            opacity: 1;
+        }
+        
+        .delete-session-btn:hover {
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
         }
         
         .session-empty {
@@ -253,6 +287,63 @@
             transition: all 0.3s ease;
         }
         
+        /* Top Header Bar */
+        .top-header {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 50;
+        }
+        
+        .theme-toggle-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .theme-toggle-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .clear-all-btn {
+            height: 40px;
+            padding: 0 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .clear-all-btn:hover {
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+            border-color: #ff3b30;
+            box-shadow: 0 4px 12px rgba(255, 59, 48, 0.2);
+        }
+        
         /* Sidebar Toggle Button */
         .sidebar-toggle-btn {
             position: fixed;
@@ -301,7 +392,7 @@
             flex: 1;
             overflow-y: auto;
             background: var(--bg-primary);
-            padding-bottom: 140px;
+            padding-bottom: clamp(120px, 15vh, 160px);
             width: 100%;
         }
         
@@ -309,7 +400,7 @@
             max-width: 100%;
             width: 100%;
             margin: 0 auto;
-            padding: 80px 0 0 0;
+            padding: clamp(60px, 10vh, 100px) 0 0 0;
             display: flex;
             flex-direction: column;
             gap: 0;
@@ -323,45 +414,43 @@
             justify-content: center;
             min-height: 60vh;
             text-align: center;
-            padding: 40px 20px;
+            padding: clamp(20px, 5vw, 40px);
         }
         
         .empty-state-icon {
-            font-size: 48px;
+            font-size: clamp(40px, 8vw, 64px);
             margin-bottom: 16px;
             opacity: 0.5;
         }
         
         .empty-state h2 {
-            font-size: 24px;
+            font-size: clamp(20px, 4vw, 28px);
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 8px;
         }
         
         .empty-state p {
-            font-size: 15px;
+            font-size: clamp(14px, 2.5vw, 16px);
             color: var(--text-secondary);
         }
         
         /* Message Wrapper - Claude style alternating backgrounds */
         .message-wrapper {
-            padding: 32px 0;
-            border-radius: 8px;
+            padding: clamp(20px, 4vh, 32px) 0;
             width: 100%;
         }
         
         .message-wrapper.assistant {
             background: var(--bg-secondary);
-            box-shadow: 0 1px 2px rgba(233, 226, 226, 0.263);
         }
         
         .message-wrapper.assistant .message-inner {
-            padding: 0 40px;
+            padding: 0 clamp(16px, 3vw, 40px);
         }
         
         .message-wrapper.user .message-inner {
-            padding: 0 40px;
+            padding: 0 clamp(16px, 3vw, 40px);
         }
         
         .message-inner {
@@ -369,7 +458,7 @@
             width: 100%;
             margin: 0 auto;
             display: flex;
-            gap: 20px;
+            gap: clamp(12px, 2vw, 20px);
         }
         
         /* Avatar */
@@ -543,9 +632,76 @@
             position: relative;
         }
         
+        .file-upload-btn {
+            position: absolute;
+            left: 12px;
+            bottom: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            z-index: 10;
+        }
+        
+        .file-upload-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .file-upload-btn input[type="file"] {
+            display: none;
+        }
+        
+        .file-preview {
+            position: absolute;
+            left: 50px;
+            bottom: calc(100% + 8px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 200px;
+            z-index: 20;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .file-preview-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .file-remove-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+        }
+        
+        .file-remove-btn:hover {
+            color: var(--accent);
+        }
+        
         .input-wrapper textarea {
             width: 100%;
             padding: 16px 20px;
+            padding-left: 50px;
             background: var(--bg-primary);
             border: 1px solid var(--border);
             border-radius: 14px;
@@ -556,6 +712,8 @@
             transition: all 0.15s ease;
             resize: none;
             min-height: 56px;
+            position: relative;
+            z-index: 1;
             max-height: 200px;
             line-height: 1.5;
             box-shadow: 0 4px 16px rgba(0,0,0,0.08);
@@ -595,6 +753,32 @@
         .send-btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
+        }
+        
+        /* Message Counter */
+        .message-counter {
+            position: absolute;
+            top: -28px;
+            right: 0;
+            font-size: 11px;
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-weight: 500;
+        }
+        
+        .message-counter.warning {
+            color: #ff9500;
+            border-color: #ff9500;
+            background: rgba(255, 149, 0, 0.1);
+        }
+        
+        .message-counter.limit {
+            color: #ff3b30;
+            border-color: #ff3b30;
+            background: rgba(255, 59, 48, 0.1);
         }
         
         /* Typing Indicator */
@@ -655,14 +839,157 @@
             outline: none;
         }
         
-        /* Responsive */
-        @media (max-width: 768px) {
+        /* Responsive Design - Mobile First */
+        
+        /* Extra Small Devices (phones, portrait, 320px - 480px) */
+        @media (max-width: 480px) {
             .sidebar {
                 position: fixed;
                 top: 0;
                 left: -280px;
                 width: 280px;
                 box-shadow: 2px 0 16px rgba(0,0,0,0.15);
+                z-index: 1000;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .sidebar.collapsed {
+                left: -280px;
+                width: 280px;
+            }
+            
+            .sidebar-header {
+                padding: 16px 12px;
+            }
+            
+            .logo {
+                font-size: 16px;
+            }
+            
+            .chat-messages {
+                padding: 70px 0 0 0;
+            }
+            
+            .message-wrapper {
+                padding: 20px 0;
+            }
+            
+            .message-wrapper.assistant .message-inner,
+            .message-wrapper.user .message-inner {
+                padding: 0 12px;
+            }
+            
+            .message-inner {
+                gap: 10px;
+            }
+            
+            .avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+            
+            .message-content {
+                font-size: 14px;
+                line-height: 1.6;
+            }
+            
+            .input-area {
+                padding: 12px 12px 20px;
+            }
+            
+            .input-container {
+                max-width: 100%;
+                gap: 8px;
+            }
+            
+            .input-wrapper textarea {
+                font-size: 14px;
+                min-height: 48px;
+                padding: 12px 16px;
+                padding-left: 45px;
+            }
+            
+            .send-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+            }
+            
+            .file-upload-btn {
+                width: 28px;
+                height: 28px;
+                left: 10px;
+                bottom: 10px;
+            }
+            
+            .file-upload-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .file-preview {
+                left: 45px;
+                bottom: 10px;
+                font-size: 11px;
+                padding: 4px 8px;
+                max-width: 150px;
+            }
+            
+            .message-counter {
+                font-size: 10px;
+                padding: 3px 6px;
+                top: -24px;
+            }
+            
+            .mobile-toggle {
+                display: flex !important;
+            }
+            
+            .sidebar-toggle-btn {
+                display: none !important;
+            }
+            
+            .top-header {
+                padding: 12px 16px;
+            }
+            
+            .clear-all-btn {
+                font-size: 0;
+                padding: 0;
+                width: 40px;
+            }
+            
+            .clear-all-btn svg {
+                margin: 0;
+            }
+            
+            .theme-toggle-btn {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .empty-state h2 {
+                font-size: 20px;
+            }
+            
+            .empty-state p {
+                font-size: 14px;
+            }
+        }
+        
+        /* Small Devices (phones, landscape, 481px - 768px) */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -280px;
+                width: 280px;
+                box-shadow: 2px 0 16px rgba(0,0,0,0.15);
+                z-index: 1000;
             }
             
             .sidebar.open {
@@ -706,9 +1033,14 @@
             .input-container {
                 max-width: 100%;
             }
+            
+            .input-wrapper textarea {
+                font-size: 15px;
+            }
         }
         
-        @media (min-width: 769px) {
+        /* Medium Devices (tablets, 769px - 1024px) */
+        @media (min-width: 769px) and (max-width: 1024px) {
             .mobile-toggle {
                 display: none !important;
             }
@@ -716,9 +1048,69 @@
             .sidebar-toggle-btn {
                 display: flex !important;
             }
+            
+            .top-header {
+                padding: 16px 20px;
+            }
+            
+            .chat-messages {
+                max-width: 800px;
+            }
+            
+            .message-inner {
+                max-width: 800px;
+            }
+            
+            .input-container {
+                max-width: 700px;
+            }
+            
+            .sidebar {
+                width: 260px;
+            }
+            
+            .sidebar:not(.collapsed) ~ .sidebar-toggle-btn {
+                left: 276px;
+            }
+            
+            .sidebar:not(.collapsed) ~ .main-content .input-area {
+                left: 260px;
+            }
         }
         
+        /* Large Devices (desktops, 1025px - 1399px) */
+        @media (min-width: 1025px) and (max-width: 1399px) {
+            .mobile-toggle {
+                display: none !important;
+            }
+            
+            .sidebar-toggle-btn {
+                display: flex !important;
+            }
+            
+            .chat-messages {
+                max-width: 900px;
+            }
+            
+            .message-inner {
+                max-width: 900px;
+            }
+            
+            .input-container {
+                max-width: 800px;
+            }
+        }
+        
+        /* Extra Large Devices (large desktops, 1400px+) */
         @media (min-width: 1400px) {
+            .mobile-toggle {
+                display: none !important;
+            }
+            
+            .sidebar-toggle-btn {
+                display: flex !important;
+            }
+            
             .chat-messages {
                 max-width: 1000px;
             }
@@ -729,6 +1121,66 @@
             
             .input-container {
                 max-width: 900px;
+            }
+        }
+        
+        /* Ultra Wide Screens (1920px+) */
+        @media (min-width: 1920px) {
+            .chat-messages {
+                max-width: 1200px;
+            }
+            
+            .message-inner {
+                max-width: 1200px;
+            }
+            
+            .input-container {
+                max-width: 1000px;
+            }
+        }
+        
+        /* Landscape orientation adjustments */
+        @media (max-height: 600px) and (orientation: landscape) {
+            .chat-messages {
+                padding-top: 60px;
+            }
+            
+            .message-wrapper {
+                padding: 16px 0;
+            }
+            
+            .input-area {
+                padding: 12px 20px 16px;
+            }
+            
+            .sidebar-header {
+                padding: 12px 16px;
+            }
+        }
+        
+        /* High DPI / Retina Displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .message-content {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+        }
+        
+        /* Print styles */
+        @media print {
+            .sidebar,
+            .sidebar-toggle-btn,
+            .mobile-toggle,
+            .input-area {
+                display: none !important;
+            }
+            
+            .main-content {
+                width: 100% !important;
+            }
+            
+            .message-wrapper.assistant {
+                background: #f5f5f5 !important;
             }
         }
     </style>
@@ -760,16 +1212,48 @@
                 <div 
                     v-for="session in chatSessions" 
                     :key="session.id"
-                    :class="['session-item', { active: session.id === currentSessionId }]"
-                    @click="loadSession(session.id)">
-                    <div class="session-title">{{ session.title }}</div>
-                    <div class="session-time">{{ session.time }}</div>
+                    :class="['session-item', { active: session.id === currentSessionId }]">
+                    <div class="session-content" @click="loadSession(session.id)">
+                        <div class="session-title">{{ session.title }}</div>
+                        <div class="session-time">{{ session.time }}</div>
+                    </div>
+                    <button class="delete-session-btn" @click.stop="deleteSession(session.id)" title="Delete chat">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
             
                         
-            <div class="sidebar-footer">
-                <button class="icon-btn" @click="toggleTheme" title="Toggle Theme">
+            <div class="sidebar-footer" style="display: none;">
+                <!-- Footer removed, theme toggle moved to top right -->
+            </div>
+        </div>
+        
+        <!-- Sidebar Toggle Button (Desktop) -->
+        <button class="sidebar-toggle-btn" @click="toggleSidebar" title="Toggle Sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+        </button>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Header Bar -->
+            <div class="top-header">
+                <button class="clear-all-btn" @click="clearAllHistory" title="Clear all chat history">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    Clear All
+                </button>
+                <button class="theme-toggle-btn" @click="toggleTheme" title="Toggle Theme">
                     <svg v-if="theme === 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"></circle>
                         <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -786,18 +1270,7 @@
                     </svg>
                 </button>
             </div>
-        </div>
-        
-        <!-- Sidebar Toggle Button (Desktop) -->
-        <button class="sidebar-toggle-btn" @click="toggleSidebar" title="Toggle Sidebar">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="9" y1="3" x2="9" y2="21"></line>
-            </svg>
-        </button>
-        
-        <!-- Main Content -->
-        <div class="main-content">
+            
             <!-- Mobile Toggle -->
             <button class="icon-btn mobile-toggle" @click="toggleSidebarMobile">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -846,12 +1319,29 @@
             <div class="input-area">
                 <div class="input-container">
                     <div class="input-wrapper">
+                        <button class="file-upload-btn" @click="$refs.fileInput.click()" title="Attach file">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                            <input 
+                                type="file" 
+                                ref="fileInput"
+                                @change="handleFileSelect"
+                                accept=".txt,.py,.js,.jsx,.ts,.tsx,.md,.json,.xml,.html,.css,.java,.cpp,.c,.h,.go,.rs,.rb,.php,.swift,.kt,.scala,.sh,.yml,.yaml,.toml,.ini,.cfg,.conf,.log,.csv,.pdf">
+                        </button>
+                        <div v-if="selectedFile" class="file-preview">
+                            <span class="file-preview-name">{{ selectedFile.name }}</span>
+                            <button class="file-remove-btn" @click="removeFile" title="Remove file">✕</button>
+                        </div>
+                        <div v-if="messages.length > 0" class="message-counter" :class="{ 'warning': isNearLimit, 'limit': isAtLimit }">
+                            {{ messageCount }} / {{ MAX_MESSAGES }}
+                        </div>
                         <textarea 
                             ref="messageInput"
                             v-model="userInput" 
                             @keydown.enter.prevent="handleEnter"
                             @input="autoResize"
-                            placeholder="Message AI Assistant..."
+                            :placeholder="isAtLimit ? 'Message limit reached. Start new chat.' : 'Message AI Assistant...'"
                             :disabled="loading"
                             rows="1"></textarea>
                     </div>
@@ -874,10 +1364,23 @@
                     chatSessions: [],
                     currentSessionId: null,
                     userInput: '',
+                    selectedFile: null,
                     loading: false,
                     sidebarCollapsed: false,
                     sidebarOpen: false,
-                    theme: 'light'
+                    theme: 'light',
+                    MAX_MESSAGES: 21
+                }
+            },
+            computed: {
+                messageCount() {
+                    return this.messages.length;
+                },
+                isNearLimit() {
+                    return this.messages.length >= this.MAX_MESSAGES - 2;
+                },
+                isAtLimit() {
+                    return this.messages.length >= this.MAX_MESSAGES;
                 }
             },
             mounted() {
@@ -937,6 +1440,12 @@
                     
                     const sessionIndex = this.chatSessions.findIndex(s => s.id === this.currentSessionId);
                     if (sessionIndex !== -1) {
+                        // Limit to 21 messages (keeps only last 21 messages)
+                        const MAX_MESSAGES = 21;
+                        if (this.messages.length > MAX_MESSAGES) {
+                            this.messages = this.messages.slice(-MAX_MESSAGES);
+                        }
+                        
                         this.chatSessions[sessionIndex].messages = this.messages;
                         this.chatSessions[sessionIndex].updatedAt = new Date().toISOString();
                         this.chatSessions[sessionIndex].time = this.formatTime(new Date());
@@ -996,6 +1505,36 @@
                         if (window.innerWidth <= 768) {
                             this.sidebarOpen = false;
                         }
+                    }
+                },
+                
+                deleteSession(sessionId) {
+                    if (confirm('Are you sure you want to delete this chat?')) {
+                        const index = this.chatSessions.findIndex(s => s.id === sessionId);
+                        if (index !== -1) {
+                            this.chatSessions.splice(index, 1);
+                            this.saveChatSessions();
+                            
+                            // If deleted session was active, load another or start new
+                            if (this.currentSessionId === sessionId) {
+                                if (this.chatSessions.length > 0) {
+                                    this.loadSession(this.chatSessions[0].id);
+                                } else {
+                                    this.startNewChat();
+                                }
+                            }
+                        }
+                    }
+                },
+                
+                clearAllHistory() {
+                    if (confirm('Are you sure you want to delete all chat history? This cannot be undone.')) {
+                        this.chatSessions = [];
+                        this.messages = [];
+                        this.currentSessionId = null;
+                        this.saveChatSessions();
+                        localStorage.removeItem('lastSessionId');
+                        this.startNewChat();
                     }
                 },
                 
@@ -1061,6 +1600,25 @@
                     }
                 },
                 
+                handleFileSelect(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        // Check file size (max 10MB)
+                        if (file.size > 10 * 1024 * 1024) {
+                            alert('File size must be less than 10MB');
+                            return;
+                        }
+                        this.selectedFile = file;
+                    }
+                },
+                
+                removeFile() {
+                    this.selectedFile = null;
+                    if (this.$refs.fileInput) {
+                        this.$refs.fileInput.value = '';
+                    }
+                },
+                
                 scrollToBottom() {
                     this.$nextTick(() => {
                         const chatArea = this.$refs.chatArea;
@@ -1079,7 +1637,13 @@
                         this.startNewChat();
                     }
                     
-                    this.messages.push({ role: 'user', content: text });
+                    // Display user message with file indicator
+                    let displayText = text;
+                    if (this.selectedFile) {
+                        displayText += ` 📎 ${this.selectedFile.name}`;
+                    }
+                    this.messages.push({ role: 'user', content: displayText });
+                    
                     this.userInput = '';
                     this.loading = true;
                     
@@ -1094,19 +1658,38 @@
                     this.scrollToBottom();
                     
                     try {
-                        const response = await fetch('/chat', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                text, 
-                                mode: 'learning'
-                            })
-                        });
+                        let response;
+                        
+                        if (this.selectedFile) {
+                            // Send with file
+                            const formData = new FormData();
+                            formData.append('text', text);
+                            formData.append('mode', 'learning');
+                            formData.append('file', this.selectedFile);
+                            
+                            response = await fetch('/chat-with-file', {
+                                method: 'POST',
+                                body: formData
+                            });
+                        } else {
+                            // Send without file
+                            response = await fetch('/chat', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    text, 
+                                    mode: 'learning'
+                                })
+                            });
+                        }
                         
                         const data = await response.json();
                         
                         this.messages.push({ role: 'assistant', content: data.reply });
                         this.saveCurrentSession();
+                        
+                        // Clear file after sending
+                        this.removeFile();
                         
                         this.scrollToBottom();
                         this.$refs.messageInput?.focus();

@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir --user \
     pydantic-ai>=1.1.0 \
     python-dotenv>=1.1.1 \
     uvicorn>=0.37.0 \
+    pypdf2>=3.0.0 \
+    python-multipart>=0.0.9 \
     && find /root/.local -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true \
     && find /root/.local -type d -name "test" -exec rm -rf {} + 2>/dev/null || true \
     && find /root/.local -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true \
