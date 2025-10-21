@@ -34,6 +34,7 @@ COPY --from=builder /root/.local /root/.local
 
 # Copy startup script and application files
 COPY start.sh ai.py main.py ./
+COPY static ./static
 
 # Make startup script executable
 RUN chmod +x start.sh
