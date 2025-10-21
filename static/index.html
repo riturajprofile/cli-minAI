@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intellis AI - AI Applications</title>
-    <link rel="icon" type="image/png" href="/static/logo.png">
-    <link rel="shortcut icon" type="image/png" href="/static/logo.png">
+    <title>MinAI - AI Applications</title>
+    <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+    <link rel="shortcut icon" type="image/svg+xml" href="/static/logo.svg">
     
     <!-- External Libraries -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -39,7 +39,7 @@
             --text-primary-dark: #ECECEC;
             --text-secondary-dark: #A0A0A0;
             --border-dark: #404040;
-            --accent-dark: #CC785C;
+            --accent-dark: #6b66e9;
             --accent-hover-dark: #B86E52;
             --sidebar-dark: #161616;
             
@@ -389,7 +389,8 @@
         }
         
         .avatar.user {
-            background: var(--text-primary);
+            /* background: var(--text-primary); */
+            background-color: #6B6B6B;
         }
         
         /* Message Content */
@@ -517,7 +518,15 @@
             padding: 20px 40px 28px;
             background: linear-gradient(to bottom, transparent, var(--bg-primary) 20%);
             pointer-events: none;
-            transition: left 0.3s ease;
+            transition: left 0.3s ease, right 0.3s ease;
+        }
+        
+        .sidebar:not(.collapsed) ~ .main-content .input-area {
+            left: 280px;
+        }
+        
+        .sidebar.collapsed ~ .main-content .input-area {
+            left: 0;
         }
         
         .input-container {
@@ -731,9 +740,9 @@
             <div class="sidebar-header">
                 <div class="logo">
                     <div class="logo-icon">
-                        <img src="/static/logo.png" alt="Intellis AI">
+                        <img src="/static/logo.svg" alt="MinAI">
                     </div>
-                    <span>Intellis AI</span>
+                    <span>MinAI</span>
                 </div>
                 <button class="new-chat-btn" @click="startNewChat">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -802,9 +811,9 @@
                 <div class="chat-messages">
                     <div v-if="messages.length === 0" class="empty-state">
                         <div class="empty-state-icon">
-                            <img src="/static/logo.png" alt="Intellis AI" style="width: 80px; height: 80px; object-fit: contain; opacity: 0.7;">
+                            <img src="/static/logo.svg" alt="MinAI" style="width: 80px; height: 80px; object-fit: contain; opacity: 0.7;">
                         </div>
-                        <h2>Welcome to Intellis AI</h2>
+                        <h2>Welcome to MinAI</h2>
                         <p>Start a conversation with our AI assistant</p>
                     </div>
                     
@@ -813,7 +822,7 @@
                         :key="index"
                         :class="['message-wrapper', msg.role]">
                         <div class="message-inner">
-                            <div class="avatar" :class="msg.role">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
+                            <div class="avatar" :class="msg.role">{{ msg.role === 'user' ? 'YOU' : 'AI' }}</div>
                             <div class="message-content" v-html="renderMarkdown(msg.content)"></div>
                         </div>
                     </div>
