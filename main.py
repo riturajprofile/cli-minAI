@@ -37,11 +37,8 @@ class ResponseModel(BaseModel):
 # ---- UI ROUTE ----
 @app.get("/")
 async def root():
-    """Serve the main HTML page"""
-    static_file = os.path.join(static_dir, "index.html")
-    if os.path.exists(static_file):
-        return FileResponse(static_file)
-    return {"message": "Create static/index.html file"}
+    index_path = os.path.join(static_dir, "index.html")
+    return FileResponse(index_path)
 
 # ---- API ROUTES ----
 @app.post("/chat", response_model=ResponseModel)
