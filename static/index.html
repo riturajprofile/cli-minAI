@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant</title>
+    
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --color-bg-light: #F3F4F6;
+            --color-surface-light: #E5E9F0;
+            --color-primary-light: #3A7BD5;
+            --color-secondary-light: #A78BFA;
+            --color-accent-light: #34D399;
+            --color-text-primary-light: #1F2937;
+            --color-text-secondary-light: #6B7280;
+            --color-border-light: #D1D5DB;
+
+            --color-bg-dark: #0F172A;
+            --color-surface-dark: #1E293B;
+            --color-primary-dark: #3B82F6;
+            --color-secondary-dark: #6366F1;
+            --color-accent-dark: #06B6D4;
+            --color-text-primary-dark: #F1F5F9;
+            --color-text-secondary-dark: #94A3B8;
+            --color-border-dark: #334155;
+            
+            /* Default to dark mode */
+            --bg-primary: var(--color-bg-dark);
+            --bg-secondary: var(--color-surface-dark);
+            --bg-tertiary: #334155;
+            --accent: var(--color-primary-dark);
+            --text-primary: var(--color-text-primary-dark);
+            --text-secondary: var(--color-text-secondary-dark);
+            --border: var(--color-border-dark);
+        }
+        
+        [data-theme="light"] {
+            --bg-primary: var(--color-bg-light);
+            --bg-secondary: var(--color-surface-light);
+            --bg-tertiary: #CBD5E1;
+            --accent: var(--color-primary-light);
+            --text-primary: var(--color-text-primary-light);
+            --text-secondary: var(--color-text-secondary-light);
+            --border: var(--color-border-light);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #3A7BD5 0%, #34D399 100%);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+        
+        #app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .icon-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        
+        .icon-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+        
+        .chat-messages {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .message-wrapper {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .message-wrapper.user {
+            flex-direction: row-reverse;
+        }
+        
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .avatar.user {
+            background: #10b981;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 18px;
+            line-height: 1.5;
+        }
+        
+        .message-wrapper.user .message-content {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        /* History Panel */
+        .history-panel {
+            position: fixed;
+            top: 81px;
+            right: -350px;
+            width: 350px;
+            height: calc(100vh - 81px);
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            transition: right 0.3s;
+            z-index: 50;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .history-panel.open {
+            right: 0;
+        }
+        
+        .history-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .history-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .close-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .history-content {
+            padding: 16px;
+        }
+        
+        .history-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        
+        .history-item:hover {
+            border-color: var(--accent);
+        }
+        
+        .history-role {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .history-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        /* Input Area */
+        .input-area {
+            padding: 20px 32px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+        
+        .input-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .input-wrapper {
+            flex: 1;
+        }
+        
+        .input-wrapper textarea {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            color: var(--text-primary);
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+        }
+        
+        .input-wrapper textarea::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .input-wrapper textarea:focus {
+            border-color: var(--accent);
+        }
+        
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            border: none;
+            background: var(--accent);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .send-btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+        
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Remove focus styles that cause issues */
+        *:focus {
+            outline: none;
+        }
+        
+        textarea:focus {
+            outline: none;
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.3;
+            }
+            30% {
+                opacity: 1;
+            }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <div class="logo">AI Assistant</div>
+            <div class="header-actions">
+                <button class="icon-btn" @click="toggleHistory" :class="{ active: showHistory }" title="History">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </button>
+                <button class="icon-btn" @click="toggleTheme" title="Toggle Theme">
+                    <svg v-if="theme === 'dark'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <div class="chat-area">
+            <div class="chat-messages">
+                <div 
+                    v-for="(msg, index) in messages" 
+                    :key="index"
+                    :class="['message-wrapper', msg.role]">
+                    <div class="avatar" :class="msg.role">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
+                    <div class="message-content">{{ msg.content }}</div>
+                </div>
+                <div v-if="loading" class="message-wrapper assistant">
+                    <div class="avatar">AI</div>
+                    <div class="message-content">
+                        <div class="typing-indicator">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Panel -->
+        <div :class="['history-panel', { open: showHistory }]">
+            <div class="history-header">
+                <h3>Chat History</h3>
+                <button class="close-btn" @click="toggleHistory">✕</button>
+            </div>
+            <div class="history-content">
+                <div 
+                    v-for="(item, index) in history" 
+                    :key="index"
+                    class="history-item">
+                    <div class="history-role">{{ item.role === 'user' ? 'You' : 'Assistant' }}</div>
+                    <div class="history-text">{{ item.content }}</div>
+                </div>
+                <div v-if="history.length === 0" style="text-align: center; color: var(--text-secondary); padding: 40px 20px;">
+                    No history yet
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        ref="messageInput"
+                        v-model="userInput" 
+                        @keydown.enter.prevent="handleEnter"
+                        placeholder="Message AI Assistant..."
+                        :disabled="loading"
+                        rows="1"></textarea>
+                </div>
+                <button class="send-btn" @click="sendMessage" :disabled="loading || !userInput.trim()">
+                    <span v-if="!loading">➤</span>
+                    <span v-else>⏳</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    messages: [],
+                    history: [],
+                    userInput: '',
+                    loading: false,
+                    showHistory: false,
+                    theme: 'dark'
+                }
+            },
+            mounted() {
+                // Load theme from localStorage
+                const savedTheme = localStorage.getItem('theme') || 'dark';
+                this.theme = savedTheme;
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                
+                // Focus input on mount
+                this.$nextTick(() => {
+                    this.$refs.messageInput?.focus();
+                });
+            },
+            methods: {
+                toggleTheme() {
+                    this.theme = this.theme === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-theme', this.theme);
+                    localStorage.setItem('theme', this.theme);
+                },
+                
+                toggleHistory() {
+                    this.showHistory = !this.showHistory;
+                },
+                
+                handleEnter(e) {
+                    if (!e.shiftKey) {
+                        this.sendMessage();
+                    }
+                },
+                
+                async sendMessage() {
+                    const text = this.userInput.trim();
+                    if (!text || this.loading) return;
+                    
+                    this.messages.push({ role: 'user', content: text });
+                    this.history.unshift({ role: 'user', content: text });
+                    this.userInput = '';
+                    this.loading = true;
+                    
+                    this.$nextTick(() => {
+                        const chatArea = document.querySelector('.chat-area');
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                    });
+                    
+                    try {
+                        const response = await fetch('/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                text, 
+                                mode: 'learning'
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        this.messages.push({ role: 'assistant', content: data.reply });
+                        this.history.unshift({ role: 'assistant', content: data.reply });
+                        
+                        this.$nextTick(() => {
+                            const chatArea = document.querySelector('.chat-area');
+                            chatArea.scrollTop = chatArea.scrollHeight;
+                            // Refocus input after message sent
+                            this.$refs.messageInput?.focus();
+                        });
+                        
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.messages.push({ 
+                            role: 'assistant', 
+                            content: 'Oops! Something went wrong. Mind trying again?' 
+                        });
+                        // Refocus input after error
+                        this.$nextTick(() => {
+                            this.$refs.messageInput?.focus();
+                        });
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

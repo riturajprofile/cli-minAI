@@ -1,8 +1,11 @@
 import os
+import json
+import re
 from dotenv import load_dotenv
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
+from prompts import MODE_PROMPTS
 
 # Load environment variables
 load_dotenv()
@@ -16,28 +19,44 @@ if not api_key:
 provider = OpenAIProvider(api_key=api_key, base_url=base_url)
 model = OpenAIChatModel("gpt-4o", provider=provider)
 
-agent = Agent(
-    model,
-    system_prompt=(
-        """
-        You are a witty, friendly learning companion but if user provokes you, respond with playful banter and sarcasm.
-        - Teach for depth: explain clearly with short examples. Keep it light and conversational.
-        - Coach first: when users seem unsure, ask guiding, open-ended questions before giving answers.
-        - Nudge curiosity: encourage exploration; offer subtle hints instead of spoilers.
-        - History use: be honest and concise when referencing prior messages; prioritize accuracy over flattery.
-        - Grammar: if you fix mistakes, do it playfully and keep it kind.
-        - Empty input: reply with a short educational or funny joke.
-        - Transparency: if asked about the underlying model, say you’re an open‑source‑based AI made by datamining co and don’t share specific model details; decline deeper probing.
-        - Tone: concise, humorous, and creative.
-        """
-    ),
-)
-
 # Dictionary to store chat history per user
 user_histories = {}
 
-def get_ai_response(user_input: str, user_id: str = "default") -> str:
+def get_ai_response(user_input: str, user_id: str = "default", mode: str = "learning") -> dict:
+    """Get AI response with mode support and visualization extraction"""
+    # Get or initialize history
     history = user_histories.get(user_id, [])
-    response = agent.run_sync(user_input, message_history=history)
+    
+    # Create agent with mode-specific prompt
+    mode_prompt = MODE_PROMPTS.get(mode, MODE_PROMPTS["learning"])
+    mode_agent = Agent(model, system_prompt=mode_prompt)
+    
+    # Get response
+    response = mode_agent.run_sync(user_input, message_history=history)
+    
+    # Update history
     user_histories[user_id] = response.all_messages()
-    return response.output
+    
+    # Extract visualization data if present
+    reply_text = response.output
+    viz_data = None
+    
+    # Look for VIZDATA block in response
+    viz_pattern = r'```VIZDATA\s*(\{.*?\})\s*```'
+    match = re.search(viz_pattern, reply_text, re.DOTALL)
+    
+    if match:
+        try:
+            viz_data = json.loads(match.group(1))
+            # Remove VIZDATA block from reply text for clean display
+            reply_text = re.sub(viz_pattern, '', reply_text, flags=re.DOTALL).strip()
+        except json.JSONDecodeError:
+            # If JSON parsing fails, keep original text
+            pass
+    
+    return {
+        "reply": reply_text,
+        "mode": mode,
+        "visualization": viz_data
+    }
+
