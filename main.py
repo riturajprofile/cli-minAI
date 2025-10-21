@@ -23,7 +23,7 @@ app.add_middleware(
 )
 
 # Mount static files directory
-static_dir = os.path.join(os.path.dirname(__file__), "static")
+static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
@@ -38,10 +38,26 @@ class ResponseModel(BaseModel):
 @app.get("/")
 async def root():
     """Serve the main HTML page"""
-    static_file = os.path.join(static_dir, "index.html")
-    if os.path.exists(static_file):
-        return FileResponse(static_file)
-    return {"message": "Static file not found"}
+    # Try multiple possible paths
+    possible_paths = [
+        os.path.join(static_dir, "index.html"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "index.html"),
+        "static/index.html",
+        "/app/static/index.html"  # Railway typical path
+    ]
+    
+    for static_file in possible_paths:
+        if os.path.exists(static_file):
+            return FileResponse(static_file)
+    
+    # Debug info
+    return {
+        "message": "Static file not found",
+        "static_dir": static_dir,
+        "cwd": os.getcwd(),
+        "file_location": os.path.abspath(__file__),
+        "tried_paths": possible_paths
+    }
 
 # ---- API ROUTES ----
 @app.post("/chat", response_model=ResponseModel)
