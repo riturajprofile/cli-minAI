@@ -7,6 +7,7 @@
     
     <!-- External Libraries -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -169,10 +170,111 @@
             line-height: 1.5;
         }
         
+        /* Markdown formatting within messages */
+        .message-content h1,
+        .message-content h2,
+        .message-content h3 {
+            margin-top: 12px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .message-content h1 { font-size: 1.5em; }
+        .message-content h2 { font-size: 1.3em; }
+        .message-content h3 { font-size: 1.1em; }
+        
+        .message-content p {
+            margin-bottom: 10px;
+        }
+        
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .message-content ul,
+        .message-content ol {
+            margin: 10px 0;
+            padding-left: 24px;
+        }
+        
+        .message-content li {
+            margin-bottom: 6px;
+            line-height: 1.6;
+        }
+        
+        .message-content code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .message-content pre {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .message-content pre code {
+            background: transparent;
+            padding: 0;
+        }
+        
+        .message-content strong {
+            font-weight: 600;
+        }
+        
+        .message-content em {
+            font-style: italic;
+        }
+        
+        .message-content blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 12px;
+            margin: 10px 0;
+            color: var(--text-secondary);
+        }
+        
+        .message-content a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        .message-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .message-content hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 12px 0;
+        }
+        
         .message-wrapper.user .message-content {
             background: var(--accent);
             border-color: var(--accent);
             color: white;
+        }
+        
+        .message-wrapper.user .message-content code {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .message-wrapper.user .message-content pre {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .message-wrapper.user .message-content a {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        .message-wrapper.user .message-content blockquote {
+            border-left-color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.9);
         }
         
         /* History Panel */
@@ -425,7 +527,7 @@
                     :key="index"
                     :class="['message-wrapper', msg.role]">
                     <div class="avatar" :class="msg.role">{{ msg.role === 'user' ? 'U' : 'AI' }}</div>
-                    <div class="message-content">{{ msg.content }}</div>
+                    <div class="message-content" v-html="renderMarkdown(msg.content)"></div>
                 </div>
                 <div v-if="loading" class="message-wrapper assistant">
                     <div class="avatar">AI</div>
@@ -499,12 +601,45 @@
                 this.theme = savedTheme;
                 document.documentElement.setAttribute('data-theme', savedTheme);
                 
+                // Configure marked options
+                if (window.marked) {
+                    marked.setOptions({
+                        breaks: true,  // Convert \n to <br>
+                        gfm: true,     // GitHub Flavored Markdown
+                        headerIds: false,
+                        mangle: false
+                    });
+                }
+                
                 // Focus input on mount
                 this.$nextTick(() => {
                     this.$refs.messageInput?.focus();
                 });
             },
             methods: {
+                renderMarkdown(text) {
+                    if (!text) return '';
+                    
+                    // Use marked.js to parse markdown
+                    if (window.marked) {
+                        try {
+                            return marked.parse(text);
+                        } catch (error) {
+                            console.error('Markdown parsing error:', error);
+                            return this.escapeHtml(text);
+                        }
+                    }
+                    
+                    // Fallback: escape HTML and preserve line breaks
+                    return this.escapeHtml(text).replace(/\n/g, '<br>');
+                },
+                
+                escapeHtml(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                },
+                
                 toggleTheme() {
                     this.theme = this.theme === 'dark' ? 'light' : 'dark';
                     document.documentElement.setAttribute('data-theme', this.theme);
