@@ -84,11 +84,8 @@
             position: relative;
         }
         
-        /* Sidebar - Floating overlay */
+        /* Sidebar - Sticky (not overlay) */
         .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
             width: 280px;
             height: 100vh;
             background: var(--sidebar-bg);
@@ -102,7 +99,10 @@
         }
         
         .sidebar.collapsed {
-            left: -280px;
+            width: 0;
+            min-width: 0;
+            overflow: hidden;
+            border-right: none;
         }
         
         .sidebar-header {
@@ -250,9 +250,10 @@
             flex-direction: column;
             position: relative;
             overflow: hidden;
+            transition: all 0.3s ease;
         }
         
-        /* Sidebar Toggle Button (always visible) */
+        /* Sidebar Toggle Button */
         .sidebar-toggle-btn {
             position: fixed;
             top: 16px;
@@ -282,6 +283,10 @@
             left: 296px;
         }
         
+        .sidebar.collapsed ~ .sidebar-toggle-btn {
+            left: 16px;
+        }
+        
         /* Mobile Toggle */
         .mobile-toggle {
             position: fixed;
@@ -297,12 +302,14 @@
             overflow-y: auto;
             background: var(--bg-primary);
             padding-bottom: 140px;
+            width: 100%;
         }
         
         .chat-messages {
-            max-width: 1200px;
+            max-width: 100%;
+            width: 100%;
             margin: 0 auto;
-            padding: 80px 40px 0 40px;
+            padding: 80px 0 0 0;
             display: flex;
             flex-direction: column;
             gap: 0;
@@ -340,19 +347,26 @@
         /* Message Wrapper - Claude style alternating backgrounds */
         .message-wrapper {
             padding: 32px 0;
+            border-radius: 8px;
             width: 100%;
         }
         
         .message-wrapper.assistant {
             background: var(--bg-secondary);
-            margin-left: -40px;
-            margin-right: -40px;
-            padding-left: 40px;
-            padding-right: 40px;
+            box-shadow: 0 2px 8px rgba(231, 81, 81, 0.451);
+        }
+        
+        .message-wrapper.assistant .message-inner {
+            padding: 0 40px;
+        }
+        
+        .message-wrapper.user .message-inner {
+            padding: 0 40px;
         }
         
         .message-inner {
-            max-width: 1200px;
+            max-width: 900px;
+            width: 100%;
             margin: 0 auto;
             display: flex;
             gap: 20px;
@@ -635,12 +649,20 @@
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
+                position: fixed;
+                top: 0;
                 left: -280px;
+                width: 280px;
                 box-shadow: 2px 0 16px rgba(0,0,0,0.15);
             }
             
             .sidebar.open {
                 left: 0;
+            }
+            
+            .sidebar.collapsed {
+                left: -280px;
+                width: 280px;
             }
             
             .mobile-toggle {
@@ -652,18 +674,16 @@
             }
             
             .chat-messages {
-                padding: 80px 20px 0 20px;
+                padding: 80px 0 0 0;
             }
             
             .message-wrapper {
                 padding: 24px 0;
             }
             
-            .message-wrapper.assistant {
-                margin-left: -20px;
-                margin-right: -20px;
-                padding-left: 20px;
-                padding-right: 20px;
+            .message-wrapper.assistant .message-inner,
+            .message-wrapper.user .message-inner {
+                padding: 0 20px;
             }
             
             .message-inner {
@@ -691,11 +711,11 @@
         
         @media (min-width: 1400px) {
             .chat-messages {
-                max-width: 1400px;
+                max-width: 1000px;
             }
             
             .message-inner {
-                max-width: 1400px;
+                max-width: 1000px;
             }
             
             .input-container {
