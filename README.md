@@ -1,12 +1,13 @@
 <div align="center">
 
-# AI Chat Agent
+# MinAI
 
-**A modern conversational AI web application powered by Pydantic AI and FastAPI**
+**A modern conversational AI web application with Claude-inspired UI, powered by Pydantic AI and FastAPI**
 
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.119+-green.svg)](https://fastapi.tiangolo.com/)
 [![Pydantic AI](https://img.shields.io/badge/Pydantic_AI-1.1+-purple.svg)](https://ai.pydantic.dev/)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3-brightgreen.svg)](https://vuejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [Features](#features) • [Quick Start](#quick-start) • [Documentation](#documentation) • [Deployment](#deployment)
@@ -34,15 +35,16 @@
 
 ## Overview
 
-This project is a full-stack AI chat application that combines the power of [Pydantic AI](https://ai.pydantic.dev/) with [FastAPI](https://fastapi.tiangolo.com/) to create an intelligent, conversational AI agent. The agent features a unique personality blend inspired by ChatGPT's clarity, Grok's wit, and Claude's empathy.
+MinAI is a full-stack AI chat application that combines the power of [Pydantic AI](https://ai.pydantic.dev/) with [FastAPI](https://fastapi.tiangolo.com/) to create an intelligent, conversational AI agent. The application features a modern, Claude-inspired UI with a collapsible sidebar, markdown rendering, and persistent chat sessions stored in the browser.
 
 ### Key Highlights
 
-- **Modern Web Interface**: Clean, responsive chat UI served via FastAPI
+- **Modern Claude-Inspired UI**: Beautiful, responsive interface with light/dark themes
+- **Collapsible Sidebar**: Sticky sidebar with chat history that adjusts main content area
+- **Persistent Sessions**: Chat history saved in browser localStorage
+- **Markdown Support**: Rich text formatting with marked.js library
 - **Intelligent Conversations**: Powered by OpenAI's GPT-4o model
-- **Persistent Chat History**: User-specific conversation context maintained per session
-- **Adaptive Personality**: Dynamic tone adjustment based on context
-- **Highly Configurable**: Custom API endpoints and model selection
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
 - **Docker Ready**: Containerized for easy deployment
 - **Cloud Deployable**: Railway.app configuration included
 
@@ -50,20 +52,32 @@ This project is a full-stack AI chat application that combines the power of [Pyd
 
 ## Features
 
+### UI/UX Features
+
+- **Claude-Style Theme** - Professional color scheme with smooth transitions
+- **Sticky Sidebar Navigation** - Collapsible sidebar that pushes content
+- **Chat Session Management** - Create, switch between, and persist multiple conversations
+- **Markdown Rendering** - Code blocks, lists, links, and rich formatting
+- **Responsive Layout** - Optimized for mobile, tablet, and desktop
+- **Dark/Light Mode** - Theme toggle with localStorage persistence
+- **Floating Input Area** - Distraction-free chat input that adjusts to sidebar
+- **Logo Integration** - Custom SVG logo support with rounded styling
+
 ### Core Capabilities
 
-- **Web-based Chat Interface** - Modern, interactive UI with real-time responses
+- **Web-based Chat Interface** - Vue.js 3 powered reactive UI
 - **RESTful API** - Well-documented endpoints for chat interactions
-- **Session Management** - Per-user chat history tracking
+- **Session Management** - Browser-based chat history with auto-save
 - **CORS Support** - Cross-origin resource sharing enabled
 - **Environment Configuration** - Secure `.env` file support
 - **Multiple Deployment Options** - Docker, Railway, or traditional hosting
 
 ### AI Features
 
-- **Context-Aware Responses** - Maintains conversation flow
+- **Context-Aware Responses** - Maintains conversation flow with per-user history
 - **Learning Mode** - Optimized for educational interactions
 - **Custom System Prompts** - Tailored personality and behavior
+- **Markdown Formatting** - AI responses with proper structure and formatting
 - **Multi-Model Support** - Compatible with various OpenAI models
 
 ---
@@ -217,9 +231,25 @@ The AI's personality is defined in the `SYSTEM_PROMPT` variable in `ai.py`. Modi
 
 1. Start the server: `uvicorn main:app --reload`
 2. Open http://localhost:8000 in your browser
-3. Type your message in the chat input
-4. Press Enter or click Send
-5. Receive AI responses in real-time
+3. **New Chat**: Click the "New Chat" button in the sidebar
+4. **Type Message**: Enter your message in the floating input at the bottom
+5. **Send**: Press Enter or click the Send button (➤)
+6. **View Response**: AI responses appear with markdown formatting
+7. **Switch Chats**: Click on any chat in the sidebar to switch sessions
+8. **Toggle Sidebar**: Click the sidebar toggle button (☰) to collapse/expand
+9. **Theme Toggle**: Click the sun/moon icon to switch dark/light mode
+
+### Chat Sessions
+
+- **Auto-Save**: All chats automatically save to browser localStorage
+- **Persistent**: Sessions remain even after closing the browser
+- **Title Auto-Update**: First message becomes the chat title
+- **Timestamps**: Each session shows "Just now", "5m ago", etc.
+
+### Keyboard Shortcuts
+
+- **Enter**: Send message
+- **Shift + Enter**: New line in message
 
 ### API Integration
 
@@ -264,7 +294,7 @@ print(response.json()["reply"])
 ## Project Structure
 
 ```
-basic-ai/
+minai/
 ├── main.py              # FastAPI application & endpoints
 ├── ai.py                # AI agent logic & system prompts
 ├── pyproject.toml       # Project metadata & dependencies
@@ -273,20 +303,29 @@ basic-ai/
 ├── start.sh             # Application startup script
 ├── README.md            # This documentation
 ├── .env                 # Environment variables (create this)
+├── .env.example         # Environment template
 ├── __pycache__/         # Python cache files
 └── static/
-    └── index.html       # Web UI interface
+    ├── index.html       # Vue.js 3 web UI with sidebar & sessions
+    └── logo.svg         # MinAI logo (add your own)
 ```
 
 ### File Descriptions
 
 - **`main.py`** - FastAPI server with CORS, static file serving, and chat endpoint
-- **`ai.py`** - Pydantic AI agent configuration, system prompts, and response logic
-- **`pyproject.toml`** - Python project configuration and dependency specifications
-- **`Dockerfile`** - Multi-stage Docker build for production deployment
+- **`ai.py`** - Pydantic AI agent configuration with markdown-aware system prompts
+- **`static/index.html`** - Complete Vue.js 3 SPA with:
+  - Collapsible sidebar navigation
+  - Chat session management with localStorage
+  - Markdown rendering with marked.js
+  - Dark/light theme toggle
+  - Responsive design with mobile support
+  - Claude-inspired UI design
+- **`static/logo.svg`** - Application logo (replace with your own)
+- **`pyproject.toml`** - Python project configuration and dependencies
+- **`Dockerfile`** - Multi-stage Docker build for production
 - **`railway.toml`** - Railway.app platform configuration
-- **`start.sh`** - Shell script to start the uvicorn server
-- **`static/index.html`** - Frontend chat interface
+- **`start.sh`** - Shell script to start uvicorn server
 
 ---
 
@@ -537,9 +576,31 @@ Contributions are welcome! Here's how you can help:
 
 - [Pydantic AI Documentation](https://ai.pydantic.dev/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Vue.js 3 Documentation](https://vuejs.org/)
+- [Marked.js (Markdown Parser)](https://marked.js.org/)
 - [OpenAI API Documentation](https://platform.openai.com/docs)
 - [Python dotenv](https://pypi.org/project/python-dotenv/)
 - [Docker Documentation](https://docs.docker.com/)
+
+---
+
+## Technology Stack
+
+### Backend
+- **FastAPI** - Modern Python web framework
+- **Pydantic AI** - AI agent framework
+- **Uvicorn** - ASGI server
+- **Python-dotenv** - Environment management
+
+### Frontend
+- **Vue.js 3** - Progressive JavaScript framework
+- **Marked.js** - Markdown parser
+- **CSS Custom Properties** - Theme system
+- **LocalStorage API** - Session persistence
+
+### AI
+- **OpenAI GPT-4o** - Language model
+- **Markdown Formatting** - Structured responses
 
 ---
 
@@ -581,7 +642,9 @@ This project is open source and available under the MIT License.
 
 <div align="center">
 
-**Made with Python, FastAPI, and Pydantic AI**
+**Made with Python, FastAPI, Pydantic AI, and Vue.js**
+
+**MinAI - Minimal Yet Powerful AI Chat**
 
 Star this repo if you find it helpful!
 
