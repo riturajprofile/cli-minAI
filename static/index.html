@@ -1422,6 +1422,29 @@
                 this.$nextTick(() => {
                     this.$refs.messageInput?.focus();
                 });
+                
+                // Add click listener to refocus input when clicking on chat area
+                this.$nextTick(() => {
+                    const chatArea = this.$refs.chatArea;
+                    if (chatArea) {
+                        chatArea.addEventListener('click', () => {
+                            // Don't steal focus if user is selecting text
+                            if (window.getSelection().toString().length === 0) {
+                                this.$refs.messageInput?.focus();
+                            }
+                        });
+                    }
+                });
+            },
+            watch: {
+                loading(newVal) {
+                    // Auto-focus when loading completes
+                    if (!newVal) {
+                        this.$nextTick(() => {
+                            this.$refs.messageInput?.focus();
+                        });
+                    }
+                }
             },
             methods: {
                 loadChatSessions() {
@@ -1523,6 +1546,11 @@
                                     this.startNewChat();
                                 }
                             }
+                            
+                            // Focus input after deletion
+                            this.$nextTick(() => {
+                                this.$refs.messageInput?.focus();
+                            });
                         }
                     }
                 },
@@ -1535,6 +1563,11 @@
                         this.saveChatSessions();
                         localStorage.removeItem('lastSessionId');
                         this.startNewChat();
+                        
+                        // Focus input after clearing
+                        this.$nextTick(() => {
+                            this.$refs.messageInput?.focus();
+                        });
                     }
                 },
                 
@@ -1609,6 +1642,10 @@
                             return;
                         }
                         this.selectedFile = file;
+                        // Focus back to input after file selection
+                        this.$nextTick(() => {
+                            this.$refs.messageInput?.focus();
+                        });
                     }
                 },
                 
@@ -1617,6 +1654,10 @@
                     if (this.$refs.fileInput) {
                         this.$refs.fileInput.value = '';
                     }
+                    // Focus back to input after removing file
+                    this.$nextTick(() => {
+                        this.$refs.messageInput?.focus();
+                    });
                 },
                 
                 scrollToBottom() {
@@ -1647,11 +1688,12 @@
                     this.userInput = '';
                     this.loading = true;
                     
-                    // Reset textarea height
+                    // Reset textarea height and focus
                     this.$nextTick(() => {
                         const textarea = this.$refs.messageInput;
                         if (textarea) {
                             textarea.style.height = 'auto';
+                            textarea.focus();
                         }
                     });
                     
