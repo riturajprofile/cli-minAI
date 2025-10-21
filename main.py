@@ -4,7 +4,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from ai import get_ai_response, user_histories
+from ai import get_ai_response
 from dotenv import load_dotenv
 import os
 
@@ -33,7 +33,6 @@ class Message(BaseModel):
 
 class ResponseModel(BaseModel):
     reply: str
-    mode: str
 
 # ---- UI ROUTE ----
 @app.get("/")
@@ -57,16 +56,5 @@ async def chat_endpoint(message: Message, request: Request):
         mode=message.mode
     )
     
-    return ResponseModel(**response_data)
+    return ResponseModel(reply=response_data["reply"])
 
-@app.get("/history/{user_id}")
-async def get_history(user_id: str):
-    """Get chat history for a user"""
-    history = user_histories.get(user_id, [])
-    formatted_history = []
-    for msg in history:
-        formatted_history.append({
-            "role": msg.role if hasattr(msg, 'role') else "unknown",
-            "content": msg.content if hasattr(msg, 'content') else str(msg)
-        })
-    return {"history": formatted_history}
