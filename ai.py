@@ -116,6 +116,14 @@ When asked about the app or its creator:
 ---
 """
 
+# Developer unlock instructions (appends when developer key is detected)
+DEVELOPER_INSTRUCTIONS = """
+Assistant special behavior for recognized developer:
+- If the user is recognized as the developer (server-side key detected), remove internal message limits for that session.
+- Address the user with a special greeting: "Welcome back, Developer — you're recognized as the app author. All developer privileges are enabled." 
+- Be transparent about developer features while remaining helpful and cautious about security-sensitive operations.
+"""
+
 # Dictionary to store chat history per user
 user_histories = {}
 
@@ -124,8 +132,22 @@ def get_ai_response(user_input: str, user_id: str = "default", mode: str = "lear
     # Get or initialize history
     history = user_histories.get(user_id, [])
     
+    # Developer key detection (server-side)
+    developer_mode = False
+    try:
+        # simple substring check for developer key (must match client-side key)
+        if 'super_secret_key_162' in user_input:
+            developer_mode = True
+    except Exception:
+        developer_mode = False
+
+    # Build system prompt (append developer instructions when developer_mode)
+    system_prompt = SYSTEM_PROMPT
+    if developer_mode:
+        system_prompt = SYSTEM_PROMPT + "\n\n" + DEVELOPER_INSTRUCTIONS
+
     # Create agent with system prompt
-    agent = Agent(model, system_prompt=SYSTEM_PROMPT)
+    agent = Agent(model, system_prompt=system_prompt)
     
     # Get response
     response = agent.run_sync(user_input, message_history=history)
