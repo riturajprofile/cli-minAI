@@ -34,9 +34,13 @@ class DebugWebsiteAnalytics {
     const geolocation = await this.getGeolocation();
     console.log('🌍 Geolocation data:', geolocation);
     
+    const userIdentification = await this.getUserIdentification();
+    console.log('👤 User identification:', userIdentification);
+    
     const data = {
       timestamp: new Date().toISOString(),
       sessionId: this.generateSessionId(),
+      userIdentification: userIdentification,
       page: this.getPageInfo(),
       browser: this.getBrowserInfo(),
       device: this.getDeviceInfo(),
@@ -68,6 +72,93 @@ class DebugWebsiteAnalytics {
 
   generateSessionId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  // Generate unique user ID based on browser fingerprint
+  async generateUniqueUserId() {
+    console.log('🔑 Generating unique user ID...');
+    
+    // Combine multiple fingerprints for uniqueness
+    const fingerprints = [
+      this.getCanvasFingerprint(),
+      navigator.userAgent,
+      navigator.language,
+      screen.colorDepth,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      !!window.sessionStorage,
+      !!window.localStorage
+    ].join('|');
+    
+    // Generate hash from fingerprints
+    const hash = await this.hashString(fingerprints);
+    return hash.substring(0, 16); // 16 character unique ID
+  }
+
+  // Simple hash function
+  async hashString(str) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Get or create persistent user ID
+  async getUserIdentification() {
+    console.log('👤 Identifying user...');
+    
+    const STORAGE_KEY = 'analytics_user_id';
+    const FIRST_VISIT_KEY = 'analytics_first_visit';
+    const VISIT_COUNT_KEY = 'analytics_visit_count';
+    const LAST_VISIT_KEY = 'analytics_last_visit';
+    
+    let userId = localStorage.getItem(STORAGE_KEY);
+    let isNewUser = false;
+    let isReturningUser = false;
+    
+    // Generate unique ID based on fingerprint
+    const fingerprintId = await this.generateUniqueUserId();
+    
+    if (!userId) {
+      // New user - first time visit
+      userId = fingerprintId;
+      isNewUser = true;
+      localStorage.setItem(STORAGE_KEY, userId);
+      localStorage.setItem(FIRST_VISIT_KEY, new Date().toISOString());
+      localStorage.setItem(VISIT_COUNT_KEY, '1');
+      console.log('✨ New user detected! ID:', userId);
+    } else {
+      // Returning user
+      isReturningUser = true;
+      const visitCount = parseInt(localStorage.getItem(VISIT_COUNT_KEY) || '0') + 1;
+      localStorage.setItem(VISIT_COUNT_KEY, visitCount.toString());
+      console.log('🔄 Returning user! ID:', userId, 'Visit #' + visitCount);
+    }
+    
+    // Update last visit time
+    const lastVisit = localStorage.getItem(LAST_VISIT_KEY);
+    localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
+    
+    // Calculate time since last visit
+    let daysSinceLastVisit = 0;
+    if (lastVisit) {
+      const lastVisitDate = new Date(lastVisit);
+      const now = new Date();
+      daysSinceLastVisit = Math.floor((now - lastVisitDate) / (1000 * 60 * 60 * 24));
+    }
+    
+    return {
+      userId: userId,
+      fingerprintId: fingerprintId,
+      isNewUser: isNewUser,
+      isReturningUser: isReturningUser,
+      visitCount: parseInt(localStorage.getItem(VISIT_COUNT_KEY) || '1'),
+      firstVisit: localStorage.getItem(FIRST_VISIT_KEY),
+      lastVisit: lastVisit,
+      daysSinceLastVisit: daysSinceLastVisit,
+      userIdMatch: userId === fingerprintId // Check if stored ID matches fingerprint
+    };
   }
 
   getPageInfo() {

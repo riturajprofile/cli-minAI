@@ -29,6 +29,17 @@ function doPost(e) {
       data.timestamp,
       data.sessionId,
       
+      // User Identification
+      data.userIdentification.userId || 'N/A',
+      data.userIdentification.fingerprintId || 'N/A',
+      data.userIdentification.isNewUser || false,
+      data.userIdentification.isReturningUser || false,
+      data.userIdentification.visitCount || 1,
+      data.userIdentification.firstVisit || 'N/A',
+      data.userIdentification.lastVisit || 'N/A',
+      data.userIdentification.daysSinceLastVisit || 0,
+      data.userIdentification.userIdMatch || false,
+      
       // Page Info
       data.page.url,
       data.page.title,
@@ -191,6 +202,10 @@ function setupHeaders() {
   const headers = [
     // Basic Info
     'Timestamp', 'Session ID',
+    
+    // User Identification
+    'User ID', 'Fingerprint ID', 'Is New User', 'Is Returning User', 'Visit Count', 
+    'First Visit', 'Last Visit', 'Days Since Last Visit', 'ID Match',
     
     // Page Info
     'URL', 'Page Title', 'Referrer', 'Protocol', 'Hostname', 'Pathname',
