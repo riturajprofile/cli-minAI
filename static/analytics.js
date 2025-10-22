@@ -1,7 +1,7 @@
 // Comprehensive Website Analytics with Google Sheets Integration
 // Google Apps Script URL - Update with your deployment URL
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzXsRaGw1T7NKUcc7Nht9ojCXpOEKhM5kS4ZZ0Mw28NrUMgXBlNncd0K696wwlrJaufg/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFKC9q6Fvx9BXNM3yJSsYgTVeCq3L0Km762oT9v8FSQejVGZ0Crn7f6dJzlDSEPtLvFw/exec';
 
 console.log('� Analytics script loaded');
 console.log('📍 Script URL:', GOOGLE_SCRIPT_URL);
