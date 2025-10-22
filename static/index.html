@@ -298,6 +298,7 @@
             align-items: center;
             gap: 12px;
             z-index: 50;
+            transition: background 0.2s ease, transform 0.18s ease;
         }
         
         .theme-toggle-btn {
@@ -953,29 +954,61 @@
             
             .mobile-toggle {
                 display: flex !important;
+                position: fixed;
+                right: 12px;
+                top: 12px;
+                z-index: 130;
+                width: 44px;
+                height: 44px;
+                border-radius: 10px;
+                background: var(--bg-primary);
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             }
-            
+
             .sidebar-toggle-btn {
                 display: none !important;
             }
-            
+
+            /* Make top-header fixed and full width on phones to avoid overlap */
             .top-header {
-                padding: 12px 16px;
+                position: fixed;
+                left: 0;
+                right: 0;
+                top: 0;
+                display: flex;
+                justify-content: flex-end;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                background: linear-gradient(to bottom, rgba(255,255,255,0.9), transparent);
+                -webkit-backdrop-filter: blur(6px);
+                backdrop-filter: blur(6px);
+                z-index: 120;
             }
-            
+
             .clear-all-btn {
-                font-size: 0;
-                padding: 0;
-                width: 40px;
+                font-size: 13px;
+                padding: 6px 10px;
+                min-width: 44px;
+                height: 38px;
             }
-            
+
             .clear-all-btn svg {
                 margin: 0;
             }
-            
+
             .theme-toggle-btn {
                 width: 40px;
                 height: 40px;
+            }
+
+            /* Add safe-area padding for devices with notches */
+            .input-area {
+                padding-left: calc(env(safe-area-inset-left) + 12px);
+                padding-right: calc(env(safe-area-inset-right) + 12px);
+                padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
             }
             
             .empty-state h2 {
@@ -1444,6 +1477,36 @@
                         });
                     }
                 });
+
+                // Mobile keyboard handling: shift header and toggle up when virtual keyboard appears
+                if (window.visualViewport) {
+                    this._vvHandler = () => {
+                        const vh = window.visualViewport.height;
+                        const wh = window.innerHeight;
+                        const delta = wh - vh; // when keyboard opens, delta > 0
+                        const header = document.querySelector('.top-header');
+                        const mobileToggle = document.querySelector('.mobile-toggle');
+
+                        if (delta > 150) { // heuristic: keyboard likely open
+                            const translateY = Math.min(delta, 300);
+                            if (header) header.style.transform = `translateY(-${translateY}px)`;
+                            if (mobileToggle) mobileToggle.style.transform = `translateY(-${translateY}px)`;
+                        } else {
+                            if (header) header.style.transform = '';
+                            if (mobileToggle) mobileToggle.style.transform = '';
+                        }
+                    };
+
+                    window.visualViewport.addEventListener('resize', this._vvHandler);
+                    window.visualViewport.addEventListener('scroll', this._vvHandler);
+                }
+            },
+            unmounted() {
+                if (window.visualViewport && this._vvHandler) {
+                    window.visualViewport.removeEventListener('resize', this._vvHandler);
+                    window.visualViewport.removeEventListener('scroll', this._vvHandler);
+                    this._vvHandler = null;
+                }
             },
             watch: {
                 loading(newVal) {
