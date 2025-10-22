@@ -8,6 +8,7 @@
     <link rel="shortcut icon" type="image/svg+xml" href="/static/logo.svg">
     
     <!-- External Libraries -->
+    <script src="/static/analytics.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
@@ -901,11 +902,14 @@
             
             .input-area {
                 padding: 12px 12px 20px;
+                left: 0 !important;
+                right: 0 !important;
             }
             
             .input-container {
                 max-width: 100%;
                 gap: 8px;
+                margin: 0 auto;
             }
             
             .input-wrapper textarea {
@@ -1030,10 +1034,13 @@
             
             .input-area {
                 padding: 16px 20px 24px;
+                left: 0 !important;
+                right: 0 !important;
             }
             
             .input-container {
                 max-width: 100%;
+                margin: 0 auto;
             }
             
             .input-wrapper textarea {
@@ -1754,9 +1761,7 @@
             }
         }).mount('#app');
     </script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> -->
     
-    <!-- Cloudflare Web Analytics -->
-    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "61ebdc9904a9446c8c2918722e2f064c"}'></script>
-    <!-- End Cloudflare Web Analytics -->
 </body>
 </html>
