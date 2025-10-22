@@ -1291,7 +1291,23 @@
         <div class="main-content">
             <!-- Top Header Bar -->
             <div class="top-header">
-                <button class="clear-all-btn" @click="clearAllHistory" title="Clear all chat history">
+                                <div style="display:flex; align-items:center; gap:8px; margin-right:8px;">
+                                        <div class="mode-toggle" style="display:flex; gap:8px; align-items:center;">
+                                            <button
+                                                :class="['icon-btn', { active: mode === 'learning' }]"
+                                                @click="setMode('learning')"
+                                                title="Detailed learning replies">
+                                                Learn
+                                            </button>
+                                            <button
+                                                :class="['icon-btn', { active: mode === 'fast' }]"
+                                                @click="setMode('fast')"
+                                                title="Fast concise replies">
+                                                Fast
+                                            </button>
+                                        </div>
+                                </div>
+                                <button class="clear-all-btn" @click="clearAllHistory" title="Clear all chat history">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -1329,6 +1345,23 @@
             
             <div class="chat-area" ref="chatArea">
                 <div class="chat-messages">
+                                        <!-- Conversation summary banner -->
+                                        <div v-if="currentSummary" class="summary-banner" style="max-width:1000px; margin: 10px auto; padding:10px 16px; border-radius:8px; background:var(--bg-secondary); border:1px solid var(--border);">
+                                            <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+                                                <div style="flex:1;">
+                                                    <strong>Conversation summary</strong>
+                                                    <div style="margin-top:6px; color:var(--text-secondary); font-size:14px;" v-html="renderMarkdown(currentSummaryShort)"></div>
+                                                </div>
+                                                <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+                                                    <button class="icon-btn" @click="toggleSummaryExpanded" :title="summaryExpanded ? 'Collapse' : 'Expand'">
+                                                        <span v-if="summaryExpanded">▾</span>
+                                                        <span v-else>▸</span>
+                                                    </button>
+                                                    <button class="icon-btn" @click="editSummary" title="Edit summary">✎</button>
+                                                </div>
+                                            </div>
+                                            <div v-if="summaryExpanded" style="margin-top:10px; color:var(--text-primary); font-size:14px;" v-html="renderMarkdown(currentSummary)"></div>
+                                        </div>
                     <div v-if="messages.length === 0" class="empty-state">
                         <div class="empty-state-icon">
                             <img src="/static/logo.svg" alt="MinAI" style="width: 80px; height: 80px; object-fit: contain; opacity: 0.7;">
@@ -1392,10 +1425,16 @@
                             :disabled="loading"
                             rows="1"></textarea>
                     </div>
-                    <button class="send-btn" @click="sendMessage" :disabled="loading || !userInput.trim()">
-                        <span v-if="!loading">➤</span>
-                        <span v-else>⏳</span>
-                    </button>
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                                            <div style="font-size:11px; color:var(--text-secondary); padding-bottom:2px;">
+                                                <span v-if="mode === 'fast'" style="color:var(--accent); font-weight:600;">FAST</span>
+                                                <span v-else style="color:var(--text-secondary);">LEARN</span>
+                                            </div>
+                                            <button class="send-btn" @click="sendMessage" :disabled="loading || !userInput.trim()">
+                                                <span v-if="!loading">➤</span>
+                                                <span v-else>⏳</span>
+                                            </button>
+                                        </div>
                 </div>
             </div>
         </div>
@@ -1408,6 +1447,9 @@
             data() {
                 return {
                     messages: [],
+                        currentSummary: null,
+                        summaryExpanded: false,
+                        mode: 'learning',
                     chatSessions: [],
                     currentSessionId: null,
                     userInput: '',
@@ -1480,6 +1522,10 @@
                 this.$nextTick(() => {
                     this.$refs.messageInput?.focus();
                 });
+
+                // Load preferred mode
+                const savedMode = localStorage.getItem('mode') || 'learning';
+                this.mode = savedMode;
                 
                 // Add click listener to refocus input when clicking on chat area
                 this.$nextTick(() => {
@@ -1604,6 +1650,21 @@
                 }
             },
             methods: {
+                setMode(newMode) {
+                    this.mode = newMode;
+                    localStorage.setItem('mode', newMode);
+                },
+
+                toggleSummaryExpanded() {
+                    this.summaryExpanded = !this.summaryExpanded;
+                },
+
+                editSummary() {
+                    const edited = prompt('Edit conversation summary:', this.currentSummary || '');
+                    if (edited !== null) {
+                        this.currentSummary = edited;
+                    }
+                },
                 loadChatSessions() {
                     const sessions = localStorage.getItem('chatSessions');
                     if (sessions) {
@@ -1879,7 +1940,7 @@
                             // Send with file
                             const formData = new FormData();
                             formData.append('text', text);
-                            formData.append('mode', 'learning');
+                            formData.append('mode', this.mode);
                             formData.append('file', this.selectedFile);
                             
                             response = await fetch('/chat-with-file', {
@@ -1893,14 +1954,18 @@
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ 
                                     text, 
-                                    mode: 'learning'
+                                    mode: this.mode
                                 })
                             });
                         }
                         
                         const data = await response.json();
-                        
+                        // Append assistant reply
                         this.messages.push({ role: 'assistant', content: data.reply });
+                        // Update summary if backend returned one
+                        if (data.summary) {
+                            this.currentSummary = data.summary;
+                        }
                         this.saveCurrentSession();
                         
                         // Clear file after sending
