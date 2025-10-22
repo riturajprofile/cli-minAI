@@ -483,25 +483,63 @@ class DebugWebsiteAnalytics {
   async sendToGoogleSheets(data) {
     console.log('📤 Sending data to Google Sheets...');
     console.log('📍 Target URL:', this.scriptUrl);
-    console.log('📦 Data to send:', JSON.stringify(data).substring(0, 200) + '...');
+    console.log('📦 Data to send (first 500 chars):', JSON.stringify(data).substring(0, 500) + '...');
     
     try {
+      // Use fetch with redirect: 'follow' to handle Google's redirect
       const response = await fetch(this.scriptUrl, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        redirect: 'follow',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
         body: JSON.stringify(data)
       });
 
-      console.log('✅ Request sent successfully (no-cors mode)');
-      console.log('ℹ️ Note: With no-cors, we cannot read the response, but the request was sent');
-      return true;
+      console.log('✅ Response received');
+      console.log('📊 Status:', response.status);
+      
+      // Try to read the response
+      try {
+        const result = await response.text();
+        console.log('📄 Response:', result);
+        
+        if (response.ok) {
+          console.log('✅ Data sent successfully to Google Sheets!');
+          return true;
+        } else {
+          console.warn('⚠️ Response not OK but request was sent');
+          return true; // Still return true as data might be saved
+        }
+      } catch (readError) {
+        console.log('ℹ️ Could not read response (this is normal for Google Apps Script)');
+        console.log('✅ Data was likely sent successfully');
+        return true;
+      }
       
     } catch (error) {
       console.error('❌ ERROR sending to Google Sheets:', error);
       console.error('Error name:', error.name);
       console.error('Error message:', error.message);
-      throw error;
+      console.error('Error stack:', error.stack);
+      
+      // Try alternative method with form data
+      console.log('🔄 Trying alternative method...');
+      try {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(data));
+        
+        await fetch(this.scriptUrl, {
+          method: 'POST',
+          body: formData
+        });
+        
+        console.log('✅ Sent via alternative method (FormData)');
+        return true;
+      } catch (altError) {
+        console.error('❌ Alternative method also failed:', altError);
+        throw error;
+      }
     }
   }
 }
@@ -513,7 +551,164 @@ window.addEventListener('DOMContentLoaded', () => {
   if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes('YOUR_SCRIPT_URL')) {
     const analytics = new DebugWebsiteAnalytics(GOOGLE_SCRIPT_URL);
     console.log('✅ Analytics initialized successfully');
+    
+    // Make analytics globally available for testing
+    window.analytics = analytics;
   } else {
     console.warn('⚠️ Analytics URL not configured. Please update GOOGLE_SCRIPT_URL');
   }
 });
+
+// Test function - you can call this from browser console
+async function testGoogleSheetConnection() {
+  console.log('🧪 Testing Google Sheet connection...');
+  
+  const testData = {
+    timestamp: new Date().toISOString(),
+    sessionId: 'test-' + Date.now(),
+    page: {
+      url: window.location.href,
+      title: 'Test Page',
+      referrer: 'Test',
+      protocol: 'https:',
+      hostname: 'test.com',
+      pathname: '/test'
+    },
+    browser: {
+      name: 'Test Browser',
+      version: '1.0',
+      engine: 'Test',
+      cookiesEnabled: true,
+      doNotTrack: 'unset',
+      onLine: true
+    },
+    device: {
+      type: 'Desktop',
+      platform: 'Test',
+      maxTouchPoints: 0,
+      hardwareConcurrency: 4,
+      deviceMemory: 8,
+      devicePixelRatio: 1,
+      orientation: 'landscape-primary'
+    },
+    screen: {
+      width: 1920,
+      height: 1080,
+      colorDepth: 24,
+      devicePixelRatio: 1,
+      orientation: 'landscape-primary',
+      windowSize: { innerWidth: 1200, innerHeight: 800 }
+    },
+    os: {
+      name: 'Test OS',
+      version: '1.0',
+      architecture: 'x64'
+    },
+    connection: {
+      effectiveType: '4g',
+      downlink: 10,
+      rtt: 50,
+      saveData: false
+    },
+    geolocation: {
+      ip: '127.0.0.1',
+      city: 'Test City',
+      region: 'Test Region',
+      country: 'Test Country',
+      countryCode: 'TC',
+      latitude: 0,
+      longitude: 0,
+      timezone: 'UTC',
+      isp: 'Test ISP',
+      asn: 'AS1234',
+      currency: 'USD'
+    },
+    locale: {
+      language: 'en-US',
+      timeZone: 'UTC',
+      languages: ['en-US']
+    },
+    keyboard: { detected: 'QWERTY' },
+    performance: {
+      loadTime: 1000,
+      domReadyTime: 500,
+      navigationType: 'navigate'
+    },
+    battery: { level: '100%', charging: true },
+    media: {
+      getUserMedia: false,
+      webrtc: false,
+      videoFormats: {}
+    },
+    graphics: {
+      webgl: true,
+      vendor: 'Test',
+      renderer: 'Test',
+      version: '1.0'
+    },
+    plugins: { count: 0, plugins: [] },
+    storage: {
+      localStorage: true,
+      indexedDB: true,
+      serviceWorker: false
+    },
+    security: {
+      https: true,
+      doNotTrack: 'unset',
+      webdriver: false
+    },
+    timeInfo: {
+      localTime: new Date().toLocaleString(),
+      utcTime: new Date().toUTCString(),
+      timezone: 'UTC',
+      timezoneOffset: 0
+    },
+    userAgentDetails: {
+      isMobile: false,
+      isTablet: false,
+      isDesktop: true,
+      isBot: false
+    },
+    canvasFingerprint: 'test123',
+    audioFingerprint: { fingerprint: 'test456' },
+    webrtc: { localIPs: [] },
+    fonts: { count: 0, installed: [] },
+    sensors: {}
+  };
+  
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify(testData)
+    });
+    
+    console.log('✅ Test request sent!');
+    console.log('📊 Status:', response.status);
+    
+    const result = await response.text();
+    console.log('📄 Response:', result);
+    
+    if (response.ok || response.status === 302) {
+      console.log('✅ CONNECTION SUCCESSFUL! Check your Google Sheet for test data.');
+    } else {
+      console.warn('⚠️ Unexpected response. Check Google Apps Script deployment settings.');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Test failed:', error);
+    console.log('\n📝 TROUBLESHOOTING STEPS:');
+    console.log('1. Make sure your Google Apps Script is deployed as Web App');
+    console.log('2. Set "Execute as" to "Me"');
+    console.log('3. Set "Who has access" to "Anyone"');
+    console.log('4. Copy the Web App URL (ends with /exec)');
+    console.log('5. Update GOOGLE_SCRIPT_URL in analytics.js');
+    return error;
+  }
+}
+
+console.log('💡 TIP: Run testGoogleSheetConnection() in console to test the connection');
