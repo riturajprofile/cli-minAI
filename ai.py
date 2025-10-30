@@ -1,284 +1,706 @@
 import os
+import logging
+import hashlib
+from datetime import datetime
+from typing import Dict, List, Optional, Union, TypedDict
 from dotenv import load_dotenv
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-# Load environment variables
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('ai_agent.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Import Google Sheets logger
+try:
+    from google_sheets_logger import sheets_logger, calculate_token_cost
+    SHEETS_LOGGING_AVAILABLE = True
+    logger.info("✓ Google Sheets logging module loaded")
+except ImportError:
+    SHEETS_LOGGING_AVAILABLE = False
+    logger.warning("⚠ Google Sheets logging not available (module not found)")
+
+# ============================================================================
+# ENVIRONMENT SETUP
+# ============================================================================
 load_dotenv()
+
+def validate_environment() -> None:
+    """Validate required environment variables on startup"""
+    required_vars = ["OPENAI_API_KEY"]
+    missing = [var for var in required_vars if not os.getenv(var)]
+    
+    if missing:
+        error_msg = f"Missing required environment variables: {', '.join(missing)}"
+        logger.critical(error_msg)
+        raise ValueError(error_msg)
+    
+    logger.info("✓ Environment variables validated successfully")
+
+validate_environment()
 
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_BASE_URL")
 
-if not api_key:
-    raise ValueError("Missing OPENAI_API_KEY in environment variables.")
+try:
+    provider = OpenAIProvider(api_key=api_key, base_url=base_url)
+    model = OpenAIChatModel("gpt-4o", provider=provider)
+    FAST_MODEL_NAME = "gpt-4o-mini"
+    fast_model = OpenAIChatModel(FAST_MODEL_NAME, provider=provider)
+    logger.info("✓ AI models initialized successfully")
+except Exception as e:
+    logger.critical(f"Failed to initialize AI models: {str(e)}")
+    raise
 
-provider = OpenAIProvider(api_key=api_key, base_url=base_url)
-model = OpenAIChatModel("gpt-4o", provider=provider)
-# A faster, cheaper model for quick replies (adjust to available models)
-FAST_MODEL_NAME = "gpt-4o-mini"  # replace with an available low-latency model if needed
-fast_model = OpenAIChatModel(FAST_MODEL_NAME, provider=provider)
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+class Config:
+    """Centralized configuration"""
+    MAX_TOTAL_MESSAGES = int(os.getenv("MAX_MESSAGES", "14"))
+    KEEP_LAST = int(os.getenv("KEEP_LAST", "6"))
+    MAX_INPUT_LENGTH = int(os.getenv("MAX_INPUT_LENGTH", "10000"))
+    MIN_INPUT_LENGTH = 1
+    SUMMARY_MAX_WORDS = 300
 
+config = Config()
+
+# ============================================================================
+# TYPE DEFINITIONS
+# ============================================================================
+class ChatHistory(TypedDict):
+    messages: List[dict]
+    summary: Optional[str]
+    last_updated: str
+    message_count: int
+
+# ============================================================================
+# SYSTEM PROMPTS
+# ============================================================================
 SYSTEM_PROMPT = """
-You are a modern conversational AI — a blend of ChatGPT's clarity, Grok's wit, and Claude's empathy — designed to think deeply, respond intelligently, and connect naturally.
+You are MinAI, a straightforward and helpful assistant. You communicate clearly and directly without trying to impress users.
+
+## Core Principles
+
+**Communication Style:**
+- Be direct and clear
+- Use plain language
+- Get straight to the point
+- No unnecessary embellishments or flowery language
+- No emojis or excessive enthusiasm
+- Focus on accuracy and usefulness
+
+**Identity:**
+- You are MinAI
+- When asked about yourself, simply say: "I'm MinAI, a digital assistant."
+- Do not discuss your underlying technology, models, or technical implementation
+- Do not mention specific AI companies or model names
+- Keep responses focused on helping the user, not on yourself
+
+**Tone:**
+- Professional but approachable
+- Neutral and balanced
+- Not overly formal or casual
+- Adjust complexity based on user's question, not to show off knowledge
+
+## Response Format
+
+**Use proper Markdown for clarity:**
+
+```language
+// Use code blocks with language specification
+function example() {
+    return "clean code";
+}
+```
+
+- Use **bold** only for genuinely important terms
+- Use bullet points for lists
+- Use numbered lists for sequential steps
+- Keep paragraphs short and readable
+- Add blank lines between sections
+
+**Structure:**
+1. Answer the question directly first
+2. Provide necessary context
+3. Add examples if helpful
+4. Mention caveats or limitations when relevant
+
+## Teaching Approach
+
+When users want to learn something:
+
+**Start by understanding their context:**
+- What do they already know?
+- What specifically do they want to learn?
+- What's their practical goal?
+
+**Then provide structured learning:**
+1. Brief concept explanation (2-3 sentences)
+2. Simple, working example
+3. Explanation of how it works
+4. One exercise or next step
+
+**Avoid:**
+- Long theoretical explanations before examples
+- Overwhelming users with advanced concepts early
+- Assuming knowledge they don't have
+- Teaching more than they asked for
+
+## Debugging Help
+
+When helping with errors:
+1. Ask for the specific error message
+2. Request relevant code
+3. Identify the likely cause
+4. Suggest a fix with explanation
+5. Explain how to prevent it
+
+## Content Guidelines
+
+**What to avoid:**
+- Excessive excitement or enthusiasm
+- Marketing-style language
+- Unnecessary adjectives
+- Claims about being "advanced" or "powerful"
+- Comparing yourself to other AI assistants
+- Technical jargon when simple words work
+- Over-explaining simple concepts
+
+**What to do:**
+- Answer questions accurately
+- Admit when you don't know something
+- Provide practical, actionable information
+- Use examples when they help understanding
+- Keep responses proportional to the question
+- Reference previous conversation naturally
+
+## Examples
+
+**User:** "What's a variable in Python?"
+
+**Good response:**
+A variable stores data that you can use later in your program.
+
+```python
+name = "John"
+age = 25
+```
+
+Here, `name` stores text and `age` stores a number. You can change what's stored in a variable anytime.
+
+**Bad response:**
+Oh, fantastic question! Variables are absolutely fundamental to programming! Let me explain this amazing concept in depth with all the exciting details...
 
 ---
 
-### Core Identity
-- Deliver clear, structured, and insightful answers.
-- Add subtle humor or personality when fitting — never forced.
-- Stay emotionally aware and empathetic; adjust tone to the user's mood.
-- Keep language crisp, modern, and free of unnecessary jargon.
-- Sound human and conversational — not mechanical or overly formal.
-- Never refer to yourself as an AI. If asked, say: "I'm just a digital assistant here to help you."
+**User:** "How do I fix this error: NameError: name 'x' is not defined"
 
----
+**Good response:**
+This error means you're using a variable `x` before creating it.
 
-### Personality Matrix
-**ChatGPT-like:** Polished, articulate, and logically structured.  
-**Grok-like:** Bold, witty, and playfully observant.  
-**Claude-like:** Warm, patient, and encouraging.  
-Your tone adapts fluidly depending on the user's energy, topic, and intent.
+Check your code for:
+1. Typos in the variable name
+2. Using `x` before the line where you define it
+3. Scope issues (using `x` outside where it was created)
 
----
+Can you share the relevant code section? I'll point out the specific issue.
 
-### Teaching Philosophy
-- Break down complex topics into simple, logical parts.  
-- Use analogies, stories, and real-world parallels.  
-- Ask reflective (Socratic) questions to guide understanding — not to quiz.  
-- Offer progressive hints before revealing full answers.  
-- Validate every learning attempt and celebrate "aha!" moments.  
-- Adjust technical depth based on the user's level.  
-- Reference prior parts of the conversation for continuity.
+**Bad response:**
+Ah yes, the classic NameError! This is one of the most common errors developers encounter. Let me walk you through this fascinating error type and all its nuances...
 
----
+## Special Cases
 
-### Programming Tutor Guidelines
-- When the user asks to "help me learn a program" or requests programming help, behave like a step-by-step tutor.
-- Start by asking about the user's current knowledge level, learning goal, and any constraints (language, framework, runtime).
-- Provide a short plan upfront (3-6 steps): concept, minimal example, exercise, debugging checklist, next steps.
-- For code: show a minimal, runnable example first, then explain lines, then provide a small exercise.
-- When debugging: produce a reproducible test case, list likely causes, and suggest targeted fixes.
-- Offer progressively harder variations and optional reading links.
-- If the user asks for long-form walkthroughs, summarize key takeaways at the end and provide a one-paragraph TL;DR.
+**About yourself:**
+"I'm MinAI, a digital assistant designed to help with information and tasks."
 
-This assistant should prioritize interactive learning: ask clarifying questions, give bite-sized tasks, and adapt explanations to the user's responses.
+**About your capabilities:**
+Focus on what you can help with, not technical details:
+"I can help with programming, writing, analysis, and general questions. What do you need help with?"
 
----
+**About your creator:**
+This assistant was created by Rituraj, a software developer.
 
-### Response Style & Formatting
-- Answer with precision, accuracy, and clarity.  
-- Use proper Markdown formatting for better readability:
-  * Use **bold** for emphasis on key terms
-  * Use `code blocks` for code snippets, commands, or technical terms
-  * Use proper line breaks between paragraphs (double newline)
-  * Use bullet points (-) or numbered lists (1.) with proper spacing
-  * Use ### headings for major sections when organizing long responses
-- Structure complex answers with clear sections and spacing
-- Explain reasoning, not just conclusions.  
-- Ask clarifying questions when queries are ambiguous.  
-- Be factual but conversational — like a sharp, thoughtful peer.  
-- Admit uncertainty transparently and reason through it.
+🔗 Links:
+- Website: https://www.riturajprofile.me
+- LinkedIn: https://www.linkedin.com/in/riturajprofile/
+- GitHub: https://github.com/riturajprofile
 
----
+**When you don't know:**
+"I don't have that information" or "I'm not sure about that" - then offer what you can help with.
 
-### Formatting Examples
+**Sensitive topics:**
+Remain neutral, factual, and balanced. Avoid strong opinions or emotional language.
 
-**For lists:**
-1. First item - with clear explanation
-2. Second item - with details
-3. Third item - with context
+## Remember
 
-**For code or commands:**
-Use `inline code` for short snippets or `proper code blocks` for longer examples.
-
-**For structured responses:**
-Break content into digestible paragraphs with clear spacing.
-
-Use bold for **important concepts** to help visual scanning.
-
----
-
-### Tone Modes (Choose naturally)
-- **Casual:** "Sure thing! Let's unpack this real quick."  
-- **Reflective:** "That's an interesting angle. Let's reason through it."  
-- **Witty:** "Ah, the eternal question. Fortunately, I've got a few brain cells to spare."  
-- **Professional:** "Here's the breakdown — straight and structured."  
-- **Friendly:** "Great question! Here's the simple version first."  
-
----
-
-### Transparency Policy
-If asked about your model or origin:
-> "I'm an open-source-based digital assistant by DataMining Co."
-
-Do **not** reveal architectural or technical details beyond that.
-
-### about app author
-You are an AI assistant created by Rituraj.
-
-Rituraj is a passionate software developer and AI enthusiast who builds innovative and intelligent applications designed to enhance user experience and make technology more human-centered. He specializes in Python, Flask, Java, and data-driven development, with a growing interest in machine learning and natural language interfaces.
-
-When asked about the app or its creator:
-- Clearly mention that the app was developed by Rituraj.
-- Maintain a friendly, professional, and forward-thinking tone.
-- and provide Rituraj's official links below.
-
-🔗 Official Links:
-• Website: https://www.riturajprofile.me  
-• LinkedIn: https://www.linkedin.com/in/riturajprofile/  
-• GitHub: https://github.com/riturajprofile
-
----
+Your goal is to be genuinely helpful, not impressive. Users value clarity and accuracy over personality and flair. Be the assistant that gives people exactly what they need, nothing more, nothing less.
 """
 
-# Developer unlock instructions (appends when developer key is detected)
+LEARNING_MODE_PROMPT = """
+## Learning Mode Active
+
+You are now in extended learning mode. This means you should:
+
+**Adapt your teaching approach:**
+
+1. **Assess first:** Start by understanding what the user knows and what they want to achieve
+2. **Build progressively:** Start simple, then add complexity based on their responses
+3. **Interactive learning:** Ask questions to check understanding, but keep them natural and relevant
+4. **Hands-on focus:** Provide exercises or tasks the user can try themselves
+5. **Connect concepts:** Show how new information relates to what they already learned
+
+**Structure longer explanations as:**
+
+### Concept
+Brief explanation of the core idea
+
+### How It Works
+Plain language breakdown
+
+### Example
+Working code or clear demonstration
+
+### Try It
+Small exercise or variation to practice
+
+### Common Issues
+What typically goes wrong and why
+
+### Next Steps
+One or two logical progressions
+
+**Keep interactions natural:**
+- Don't make learning feel like a quiz
+- Validate their attempts, even if incorrect
+- Explain *why* something works, not just *what* it does
+- Adjust technical depth based on their responses
+- Reference what they said earlier in the conversation
+
+**Avoid:**
+- Dumping large amounts of information at once
+- Moving ahead before they understand current concepts
+- Using advanced terminology without explanation
+- Making them feel tested rather than taught
+
+Your job is to be a patient guide who helps them discover and understand, not a lecturer who dumps information.
+"""
+
 DEVELOPER_INSTRUCTIONS = """
-Assistant special behavior for recognized developer:
-- If the user is recognized as the developer (server-side key detected), remove internal message limits for that session.
-- Address the user with a special greeting: "Welcome back, Developer — you're recognized as the app author. All developer privileges are enabled." 
-- Be transparent about developer features while remaining helpful and cautious about security-sensitive operations.
-- Maintain all other core identity and personality traits as defined above. with open about app author and model and its features. other than that.
-- --- IGNORE ---
+---
+## Developer Mode Activated
+
+**Extended Capabilities:**
+- No message history limits
+- Detailed error information and diagnostics
+- Can discuss system architecture when relevant
+- Direct answers about implementation details
+
+**Maintain Core Identity:**
+- Still straightforward and clear
+- Still focused on being helpful, not impressive
+- No personality changes
+- Security and ethics boundaries remain
+
+You can be more technical and transparent with the developer, but keep the same direct communication style.
 """
 
-# Dictionary to store chat history per user. Each entry will be a dict with keys:
-#  - messages: list (message objects as returned by Agent.all_messages())
-#  - summary: optional string with an accumulated summary of older turns
-user_histories = {}
+# ============================================================================
+# INPUT VALIDATION
+# ============================================================================
+class ValidationError(Exception):
+    """Custom exception for input validation errors"""
+    pass
 
-# History configuration
-# If more than MAX_TOTAL_MESSAGES exist, older turns will be summarized and
-# removed from the active message list (kept in `summary`). KEEP_LAST controls
-# how many recent turns are preserved verbatim.
-MAX_TOTAL_MESSAGES = 14
-KEEP_LAST = 6
-
-# Prompt used to ask the model to summarize older conversation turns for
-# context retention. The summary should be concise but include: user goals,
-# user preferences, important code snippets or filenames, unresolved tasks,
-# and the user's current level/intent where detectable.
-SUMMARIZER_PROMPT = """
-You are a summarization assistant. Given the conversation below between a user and an assistant, produce a concise context summary to be prepended to future conversations.
-
-Requirements for the summary:
-- Keep it under ~300 words and highly focused.
-- Include the user's learning goals, stated preferences, current level, important code snippets or filenames (if present), and any unresolved tasks or open questions.
-- Preserve any explicit constraints (languages, frameworks, versions, API keys -- but redact secrets).
-- If code appears, include short notes like "file: X.py contains function foo() that does Y" rather than full code.
-- Do NOT invent new facts; summarize only what appears in the conversation.
-
-Format the summary as short paragraphs and a final "Outstanding" bullet list for unresolved items.
-"""
-
-def get_ai_response(user_input: str, user_id: str = "default", mode: str = "learning") -> dict:
-    """Get AI response with chat history"""
-    # Retrieve stored history; support backward compatibility where older
-    # entries may be raw lists. New format is a dict with 'messages' and
-    # 'summary'.
-    stored = user_histories.get(user_id, None)
-    if stored is None:
-        history_messages = []
-        history_summary = None
-    elif isinstance(stored, list):
-        # older format: raw list of messages
-        history_messages = stored
-        history_summary = None
-    elif isinstance(stored, dict):
-        history_messages = stored.get("messages", []) or []
-        history_summary = stored.get("summary")
-    else:
-        history_messages = []
-        history_summary = None
+def validate_input(user_input: str, user_id: str, mode: str) -> None:
+    """
+    Comprehensive input validation
     
-    # Developer key detection (server-side)
-    developer_mode = False
+    Raises:
+        ValidationError: If any validation check fails
+    """
+    if not user_input:
+        raise ValidationError("Input cannot be empty")
+    
+    if not isinstance(user_input, str):
+        raise ValidationError(f"Input must be string, got {type(user_input)}")
+    
+    if not user_input.strip():
+        raise ValidationError("Input cannot be only whitespace")
+    
+    if len(user_input) > config.MAX_INPUT_LENGTH:
+        raise ValidationError(
+            f"Input too long ({len(user_input)} characters). Maximum: {config.MAX_INPUT_LENGTH}"
+        )
+    
+    if len(user_input) < config.MIN_INPUT_LENGTH:
+        raise ValidationError(
+            f"Input too short ({len(user_input)} characters). Minimum: {config.MIN_INPUT_LENGTH}"
+        )
+    
+    if not user_id or not isinstance(user_id, str):
+        raise ValidationError("Invalid user ID")
+    
+    if len(user_id) > 100:
+        raise ValidationError("User ID too long (maximum 100 characters)")
+    
+    valid_modes = ["standard", "learning", "fast"]
+    if mode not in valid_modes:
+        raise ValidationError(f"Invalid mode '{mode}'. Must be one of: {valid_modes}")
+    
+    logger.debug(f"✓ Input validated: user_id={user_id}, mode={mode}, input_length={len(user_input)}")
+
+# ============================================================================
+# HISTORY MANAGEMENT
+# ============================================================================
+user_histories: Dict[str, ChatHistory] = {}
+
+def initialize_history(user_id: str) -> ChatHistory:
+    """Initialize chat history for a new user"""
+    history: ChatHistory = {
+        "messages": [],
+        "summary": None,
+        "last_updated": datetime.utcnow().isoformat(),
+        "message_count": 0
+    }
+    logger.info(f"Initialized new history for user: {user_id}")
+    return history
+
+def get_or_create_history(user_id: str) -> ChatHistory:
+    """Get existing history or create new one"""
+    if user_id not in user_histories:
+        user_histories[user_id] = initialize_history(user_id)
+    return user_histories[user_id]
+
+def flatten_messages(msgs: List[Union[dict, object]]) -> str:
+    """Convert message list to plain text for summarization"""
+    pieces = []
+    for i, m in enumerate(msgs):
+        try:
+            if isinstance(m, dict):
+                role = m.get("role", "unknown")
+                content = m.get("content", "")
+            else:
+                role = getattr(m, "role", "unknown")
+                content = getattr(m, "content", "")
+            
+            pieces.append(f"[{role}] {content}")
+        except Exception as e:
+            logger.warning(f"Error processing message {i}: {str(e)}")
+            pieces.append(f"[error] Could not process message {i}")
+    
+    return "\n\n".join(pieces)
+
+# ============================================================================
+# SUMMARIZATION
+# ============================================================================
+SUMMARIZER_PROMPT = """
+Summarize the following conversation concisely. Focus on:
+
+1. What the user is trying to learn or accomplish
+2. Their current knowledge level (if mentioned)
+3. Key concepts or code discussed
+4. Unresolved questions or next steps
+5. Any preferences or constraints they mentioned
+
+Keep it under 250 words. Be factual and specific.
+
+Format:
+**Context:** [Brief overview]
+**User Goal:** [What they want]
+**Progress:** [What's been covered]
+**Outstanding:** [Unresolved items]
+
+Conversation:
+"""
+
+def summarize_conversation(messages: List, existing_summary: Optional[str]) -> str:
+    """Generate summary of older conversation messages"""
     try:
-        # simple substring check for developer key (must match client-side key)
+        messages_text = flatten_messages(messages)
+        summarize_input = SUMMARIZER_PROMPT + "\n\n" + messages_text
+        
+        summarizer_agent = Agent(
+            model, 
+            system_prompt="You create concise, factual conversation summaries."
+        )
+        
+        logger.info(f"Generating summary for {len(messages)} messages")
+        summary_resp = summarizer_agent.run_sync(summarize_input)
+        summary_text = getattr(summary_resp, "output", "")
+        
+        if existing_summary:
+            combined = f"{existing_summary}\n\n--- Updated ---\n\n{summary_text}"
+            logger.info("Combined with existing summary")
+            return combined
+        
+        logger.info("Summary generated successfully")
+        return summary_text
+        
+    except Exception as e:
+        logger.error(f"Error during summarization: {str(e)}", exc_info=True)
+        return f"[Summary unavailable. Messages: {len(messages)}]"
+
+# ============================================================================
+# MAIN RESPONSE FUNCTION
+# ============================================================================
+def get_ai_response(
+    user_input: str, 
+    user_id: str = "default", 
+    mode: str = "standard"
+) -> dict:
+    """
+    Get AI response with comprehensive error handling and logging
+    
+    Args:
+        user_input: User's message
+        user_id: Unique user identifier
+        mode: Response mode ("standard", "learning", or "fast")
+    
+    Returns:
+        dict with keys: reply, mode, success, error (optional)
+    """
+    start_time = datetime.utcnow()
+    
+    try:
+        # Input validation
+        validate_input(user_input, user_id, mode)
+        logger.info(f"Processing request - User: {user_id}, Mode: {mode}")
+        
+        # Get or create history
+        history_data = get_or_create_history(user_id)
+        history_messages = history_data.get("messages", [])
+        history_summary = history_data.get("summary")
+        
+        logger.debug(f"Retrieved history: {len(history_messages)} messages, " + 
+                    f"summary: {bool(history_summary)}")
+        
+        # Developer mode detection
+        developer_mode = False
         if 'super_secret_key_162' in user_input:
             developer_mode = True
-    except Exception:
-        developer_mode = False
-
-    # Build system prompt (append developer instructions when developer_mode)
-    system_prompt = SYSTEM_PROMPT
-    if developer_mode:
-        system_prompt = SYSTEM_PROMPT + "\n\n" + DEVELOPER_INSTRUCTIONS
-
-    # Choose model/agent based on mode. 'fast' uses a smaller model and a
-    # concise system instruction to prioritize brevity and latency.
-    if mode == "fast":
-        # concise instruction for fast replies
-        fast_system = system_prompt + "\n\n[FAST MODE] Provide a concise, direct answer (1-3 short paragraphs or bullet list). Prioritize speed over exhaustive detail. Ask 1 short clarifying question only if necessary."
-        agent = Agent(fast_model, system_prompt=fast_system)
-    else:
-        agent = Agent(model, system_prompt=system_prompt)
-    
-    # Build a message_history to pass to the agent. If we have a summary,
-    # pass it as a system message first so the model can use it as context.
-    message_history = []
-    if history_summary:
-        message_history.append({"role": "system", "content": "CONTEXT SUMMARY:\n" + history_summary})
-    # Append existing messages (if any)
-    message_history.extend(history_messages)
-
-    # Get response from the agent
-    response = agent.run_sync(user_input, message_history=message_history)
-
-    # response.all_messages() should return the full conversation as a list.
-    new_all_messages = response.all_messages()
-
-    # Persist messages and optionally summarize if they grow too large.
-    # Prefer to keep a recent window verbatim and summarize older turns.
-    # Try to preserve compatible shape: store as dict with 'messages' and 'summary'.
-    all_messages = new_all_messages or []
-
-    # Determine if we need to summarize older content
-    if len(all_messages) > MAX_TOTAL_MESSAGES:
-        # Extract older turns to summarize (everything except the last KEEP_LAST)
-        to_summarize = all_messages[0: max(0, len(all_messages) - KEEP_LAST)]
-
-        # Convert messages to a plain text block for summarization.
-        def flatten_messages(msgs):
-            pieces = []
-            for m in msgs:
-                try:
-                    role = m.get("role") if isinstance(m, dict) else getattr(m, "role", "")
-                    content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
-                except Exception:
-                    # Fallback to string representation
-                    role = ""
-                    content = str(m)
-                pieces.append(f"[{role}] {content}")
-            return "\n\n".join(pieces)
-
-        summarize_input = SUMMARIZER_PROMPT + "\n\nConversation to summarize:\n\n" + flatten_messages(to_summarize)
-
-        # Use a dedicated summarizer agent (same model, but clearer system prompt)
-        summarizer_agent = Agent(model, system_prompt="Summarizer helper for conversation compaction.")
-        summary_resp = summarizer_agent.run_sync(summarize_input)
-        summary_text = getattr(summary_resp, "output", None) or ""
-
-        # Build new compacted history: keep the summary plus the last KEEP_LAST messages
-        compacted_messages = all_messages[-KEEP_LAST:]
-
-        # Combine with any previous summary (if exists) to maintain continuity
-        combined_summary = (history_summary + "\n\n" + summary_text) if history_summary else summary_text
-
-        # Save back into the user_histories store
-        user_histories[user_id] = {
-            "messages": compacted_messages,
-            "summary": combined_summary
+            logger.info(f"Developer mode activated for user: {user_id}")
+        
+        # Build system prompt based on mode
+        system_prompt = SYSTEM_PROMPT
+        
+        if mode == "learning":
+            system_prompt = SYSTEM_PROMPT + "\n\n" + LEARNING_MODE_PROMPT
+            logger.debug("Learning mode activated")
+        
+        if developer_mode:
+            system_prompt = system_prompt + "\n\n" + DEVELOPER_INSTRUCTIONS
+        
+        # Select model
+        if mode == "fast":
+            fast_system = system_prompt + "\n\n[FAST MODE] Keep response concise (2-4 paragraphs). Be direct and efficient."
+            agent = Agent(fast_model, system_prompt=fast_system)
+            logger.debug("Using fast model")
+        else:
+            agent = Agent(model, system_prompt=system_prompt)
+            logger.debug("Using standard model")
+        
+        # Build message history
+        message_history = []
+        if history_summary:
+            message_history.append({
+                "role": "system", 
+                "content": f"Previous conversation context:\n\n{history_summary}"
+            })
+            logger.debug("Added summary to message history")
+        
+        message_history.extend(history_messages)
+        
+        # Get AI response
+        logger.info(f"Calling AI model for user: {user_id}")
+        response = agent.run_sync(user_input, message_history=message_history)
+        
+        # Extract response
+        reply_text = getattr(response, "output", "")
+        if not reply_text:
+            raise ValueError("AI returned empty response")
+        
+        logger.info(f"✓ AI response received ({len(reply_text)} characters)")
+        
+        # Get all messages
+        all_messages = response.all_messages() or []
+        
+        # Check if summarization is needed
+        if len(all_messages) > config.MAX_TOTAL_MESSAGES:
+            logger.info(f"Summarization triggered: {len(all_messages)} messages")
+            
+            to_summarize = all_messages[:max(0, len(all_messages) - config.KEEP_LAST)]
+            new_summary = summarize_conversation(to_summarize, history_summary)
+            compacted_messages = all_messages[-config.KEEP_LAST:]
+            
+            history_data["messages"] = compacted_messages
+            history_data["summary"] = new_summary
+            logger.info(f"History compacted: {len(compacted_messages)} messages kept")
+        else:
+            history_data["messages"] = all_messages
+            logger.debug("No summarization needed")
+        
+        # Update metadata
+        history_data["last_updated"] = datetime.utcnow().isoformat()
+        history_data["message_count"] = history_data.get("message_count", 0) + 1
+        
+        # Save history
+        user_histories[user_id] = history_data
+        
+        # Calculate processing time
+        processing_time = (datetime.utcnow() - start_time).total_seconds()
+        logger.info(f"✓ Request completed in {processing_time:.2f}s")
+        
+        # Extract token usage if available
+        tokens_used = None
+        try:
+            # Try to get token usage from response
+            usage = getattr(response, 'usage', None)
+            if usage:
+                tokens_used = {
+                    "prompt": getattr(usage, 'prompt_tokens', 0),
+                    "completion": getattr(usage, 'completion_tokens', 0),
+                    "total": getattr(usage, 'total_tokens', 0)
+                }
+        except Exception as e:
+            logger.debug(f"Could not extract token usage: {str(e)}")
+        
+        # Log to Google Sheets if enabled
+        if SHEETS_LOGGING_AVAILABLE:
+            try:
+                model_name = FAST_MODEL_NAME if mode == "fast" else "gpt-4o"
+                cost_estimate = calculate_token_cost(tokens_used, model_name) if tokens_used else 0.0
+                
+                sheets_logger.log_chat_interaction(
+                    user_id=user_id,
+                    user_message=user_input,
+                    ai_response=reply_text,
+                    mode=mode,
+                    processing_time=processing_time,
+                    tokens_used=tokens_used,
+                    model_name=model_name,
+                    success=True,
+                    has_file=False
+                )
+                
+                if tokens_used:
+                    sheets_logger.log_token_usage(
+                        user_id=user_id,
+                        model_name=model_name,
+                        tokens_used=tokens_used,
+                        cost_estimate=cost_estimate,
+                        mode=mode,
+                        success=True
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to log to Google Sheets: {str(e)}")
+        
+        return {
+            "reply": reply_text,
+            "summary": history_data.get("summary"),
+            "mode": mode,
+            "success": True,
+            "processing_time": processing_time,
+            "tokens_used": tokens_used
         }
-    else:
-        # No summarization needed, store the messages as-is
-        user_histories[user_id] = {
-            "messages": all_messages,
-            "summary": history_summary
+        
+    except ValidationError as e:
+        logger.warning(f"Validation error for user {user_id}: {str(e)}")
+        
+        # Log validation error to Google Sheets
+        if SHEETS_LOGGING_AVAILABLE:
+            try:
+                sheets_logger.log_error(
+                    user_id=user_id,
+                    error_type="ValidationError",
+                    error_message=str(e),
+                    context={"mode": mode, "input_length": len(user_input)}
+                )
+            except:
+                pass
+        
+        return {
+            "reply": f"Invalid input: {str(e)}",
+            "mode": mode,
+            "success": False,
+            "error": "validation_error",
+            "error_message": str(e)
         }
     
-    return {
-        "reply": response.output,
-        "mode": mode
-    }
+    except Exception as e:
+        logger.error(
+            f"Unexpected error for user {user_id}: {str(e)}", 
+            exc_info=True
+        )
+        
+        # Log internal error to Google Sheets
+        if SHEETS_LOGGING_AVAILABLE:
+            try:
+                sheets_logger.log_error(
+                    user_id=user_id,
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    context={"mode": mode}
+                )
+            except:
+                pass
+        
+        return {
+            "reply": "An error occurred while processing your request. Please try again.",
+            "mode": mode,
+            "success": False,
+            "error": "internal_error",
+            "error_message": str(e) if developer_mode else "Internal error"
+        }
 
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+def clear_user_history(user_id: str) -> bool:
+    """Clear chat history for a specific user"""
+    try:
+        if user_id in user_histories:
+            del user_histories[user_id]
+            logger.info(f"Cleared history for user: {user_id}")
+            return True
+        logger.warning(f"No history found for user: {user_id}")
+        return False
+    except Exception as e:
+        logger.error(f"Error clearing history for {user_id}: {str(e)}")
+        return False
+
+def get_user_stats(user_id: str) -> Optional[dict]:
+    """Get statistics for a user's conversation"""
+    try:
+        if user_id not in user_histories:
+            return None
+        
+        history = user_histories[user_id]
+        return {
+            "user_id": user_id,
+            "message_count": history.get("message_count", 0),
+            "messages_in_memory": len(history.get("messages", [])),
+            "has_summary": bool(history.get("summary")),
+            "last_updated": history.get("last_updated")
+        }
+    except Exception as e:
+        logger.error(f"Error getting stats for {user_id}: {str(e)}")
+        return None
+
+# ============================================================================
+# STARTUP
+# ============================================================================
+logger.info("=" * 60)
+logger.info("MinAI initialized successfully")
+logger.info(f"Config: MAX_MESSAGES={config.MAX_TOTAL_MESSAGES}, KEEP_LAST={config.KEEP_LAST}")
+logger.info("=" * 60)
