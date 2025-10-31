@@ -1486,8 +1486,8 @@
                             v-model="userInput" 
                             @keydown.enter="handleEnter"
                             @input="autoResize"
-                            :placeholder="isAtLimit ? 'Message limit reached. Start new chat.' : 'Message AI Assistant...'"
-                            :disabled="loading"
+                            :placeholder="isAtLimit ? 'Message limit reached. Start new chat.' : isTyping ? 'AI is typing...' : 'Message AI Assistant...'"
+                            :disabled="loading || isTyping"
                             rows="1"></textarea>
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
@@ -1496,8 +1496,9 @@
                             <span v-else-if="mode === 'learning'" style="color:#5856D6;">📚 LEARN</span>
                             <span v-else style="color:var(--accent);">● STD</span>
                         </div>
-                        <button class="send-btn" @click="sendMessage" :disabled="loading || !userInput.trim()">
-                            <span v-if="!loading">➤</span>
+                        <button class="send-btn" @click="sendMessage" :disabled="loading || isTyping || !userInput.trim()">
+                            <span v-if="!loading && !isTyping">➤</span>
+                            <span v-else-if="isTyping">✍️</span>
                             <span v-else>⏳</span>
                         </button>
                     </div>
@@ -1521,6 +1522,7 @@
                     userInput: '',
                     selectedFile: null,
                     loading: false,
+                    isTyping: false,
                     sidebarCollapsed: false,
                     sidebarOpen: false,
                     theme: 'light',
@@ -1926,6 +1928,7 @@
                 
                 // Typewriter effect function
                 async typewriterEffect(text, messageIndex) {
+                    this.isTyping = true; // Set typing flag
                     const speed = 15; // milliseconds per character (faster = lower number)
                     let currentText = '';
                     
@@ -1939,6 +1942,8 @@
                         // Small delay between characters
                         await new Promise(resolve => setTimeout(resolve, speed));
                     }
+                    
+                    this.isTyping = false; // Clear typing flag when done
                 },
                 
                 handleFileSelect(event) {
@@ -1979,7 +1984,7 @@
                 
                 async sendMessage() {
                     const text = this.userInput.trim();
-                    if (!text || this.loading) return;
+                    if (!text || this.loading || this.isTyping) return;
 
                     // Developer unlock: if user types special key, enable developer mode locally
                     if (text.includes(this.DEVELOPER_KEY)) {
@@ -2049,11 +2054,14 @@
                         
                         const data = await response.json();
                         
+                        // Stop loading spinner, but keep typing flag active
+                        this.loading = false;
+                        
                         // Add assistant message with empty content first
                         this.messages.push({ role: 'assistant', content: '' });
                         const messageIndex = this.messages.length - 1;
                         
-                        // Apply typewriter effect
+                        // Apply typewriter effect (this sets isTyping flag internally)
                         await this.typewriterEffect(data.reply, messageIndex);
                         
                         // Update summary if backend returned one
@@ -2070,6 +2078,7 @@
                         
                     } catch (error) {
                         console.error('Error:', error);
+                        this.loading = false;
                         this.messages.push({ 
                             role: 'assistant', 
                             content: 'Oops! Something went wrong. Mind trying again?' 
@@ -2077,8 +2086,6 @@
                         this.$nextTick(() => {
                             this.$refs.messageInput?.focus();
                         });
-                    } finally {
-                        this.loading = false;
                     }
                 }
             }
