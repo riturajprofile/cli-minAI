@@ -15,14 +15,23 @@ import mimetypes
 # ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('server.log'),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging with fallback for environments without write access
+try:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler('server.log'),
+            logging.StreamHandler()
+        ]
+    )
+except (PermissionError, OSError):
+    # Fallback to console-only logging (for Railway/Docker environments)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
 logger = logging.getLogger(__name__)
 
 # ============================================================================
@@ -277,10 +286,18 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    api_key = os.getenv("OPENAI_API_KEY")
+    base_url = os.getenv("OPENAI_BASE_URL")
+    
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "service": "MinAI API"
+        "service": "MinAI API",
+        "config": {
+            "api_key_configured": bool(api_key),
+            "base_url_configured": bool(base_url),
+            "base_url": base_url if base_url else "default"
+        }
     }
 
 @app.post("/chat", response_model=ResponseModel)

@@ -11,14 +11,23 @@ from pydantic_ai.providers.openai import OpenAIProvider
 # ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('ai_agent.log'),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging with fallback for environments without write access
+try:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler('ai_agent.log'),
+            logging.StreamHandler()
+        ]
+    )
+except (PermissionError, OSError):
+    # Fallback to console-only logging (for Railway/Docker environments)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
 logger = logging.getLogger(__name__)
 
 # ============================================================================
@@ -43,6 +52,18 @@ validate_environment()
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_BASE_URL")
 
+# Log configuration (without exposing full API key)
+if api_key:
+    masked_key = api_key[:10] + "..." + api_key[-4:] if len(api_key) > 14 else "***"
+    logger.info(f"API Key detected: {masked_key}")
+else:
+    logger.warning("No API key found in environment")
+
+if base_url:
+    logger.info(f"Using custom base URL: {base_url}")
+else:
+    logger.info("Using default OpenAI endpoint")
+
 try:
     provider = OpenAIProvider(api_key=api_key, base_url=base_url)
     model = OpenAIChatModel("gpt-4o", provider=provider)
@@ -51,6 +72,7 @@ try:
     logger.info("✓ AI models initialized successfully")
 except Exception as e:
     logger.critical(f"Failed to initialize AI models: {str(e)}")
+    logger.critical(f"API Key present: {bool(api_key)}, Base URL: {base_url}")
     raise
 
 # ============================================================================
@@ -587,17 +609,28 @@ def get_ai_response(
         }
     
     except Exception as e:
+        error_str = str(e)
         logger.error(
-            f"Unexpected error for user {user_id}: {str(e)}", 
+            f"Unexpected error for user {user_id}: {error_str}", 
             exc_info=True
         )
         
+        # Provide more specific error messages for common issues
+        if "api_key" in error_str.lower() or "authentication" in error_str.lower():
+            user_message = "Service configuration error. Please contact support."
+        elif "timeout" in error_str.lower() or "connection" in error_str.lower():
+            user_message = "Connection timeout. Please try again in a moment."
+        elif "rate limit" in error_str.lower():
+            user_message = "Service is busy. Please try again in a few seconds."
+        else:
+            user_message = "An error occurred while processing your request. Please try again."
+        
         return {
-            "reply": "An error occurred while processing your request. Please try again.",
+            "reply": user_message,
             "mode": mode,
             "success": False,
             "error": "internal_error",
-            "error_message": str(e) if developer_mode else "Internal error"
+            "error_message": error_str if developer_mode else "Internal error"
         }
 
 # ============================================================================
