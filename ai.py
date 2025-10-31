@@ -21,15 +21,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import Google Sheets logger
-try:
-    from google_sheets_logger import sheets_logger, calculate_token_cost
-    SHEETS_LOGGING_AVAILABLE = True
-    logger.info("✓ Google Sheets logging module loaded")
-except ImportError:
-    SHEETS_LOGGING_AVAILABLE = False
-    logger.warning("⚠ Google Sheets logging not available (module not found)")
-
 # ============================================================================
 # ENVIRONMENT SETUP
 # ============================================================================
@@ -575,36 +566,6 @@ def get_ai_response(
         except Exception as e:
             logger.debug(f"Could not extract token usage: {str(e)}")
         
-        # Log to Google Sheets if enabled
-        if SHEETS_LOGGING_AVAILABLE:
-            try:
-                model_name = FAST_MODEL_NAME if mode == "fast" else "gpt-4o"
-                cost_estimate = calculate_token_cost(tokens_used, model_name) if tokens_used else 0.0
-                
-                sheets_logger.log_chat_interaction(
-                    user_id=user_id,
-                    user_message=user_input,
-                    ai_response=reply_text,
-                    mode=mode,
-                    processing_time=processing_time,
-                    tokens_used=tokens_used,
-                    model_name=model_name,
-                    success=True,
-                    has_file=False
-                )
-                
-                if tokens_used:
-                    sheets_logger.log_token_usage(
-                        user_id=user_id,
-                        model_name=model_name,
-                        tokens_used=tokens_used,
-                        cost_estimate=cost_estimate,
-                        mode=mode,
-                        success=True
-                    )
-            except Exception as e:
-                logger.warning(f"Failed to log to Google Sheets: {str(e)}")
-        
         return {
             "reply": reply_text,
             "summary": history_data.get("summary"),
@@ -616,18 +577,6 @@ def get_ai_response(
         
     except ValidationError as e:
         logger.warning(f"Validation error for user {user_id}: {str(e)}")
-        
-        # Log validation error to Google Sheets
-        if SHEETS_LOGGING_AVAILABLE:
-            try:
-                sheets_logger.log_error(
-                    user_id=user_id,
-                    error_type="ValidationError",
-                    error_message=str(e),
-                    context={"mode": mode, "input_length": len(user_input)}
-                )
-            except:
-                pass
         
         return {
             "reply": f"Invalid input: {str(e)}",
@@ -642,18 +591,6 @@ def get_ai_response(
             f"Unexpected error for user {user_id}: {str(e)}", 
             exc_info=True
         )
-        
-        # Log internal error to Google Sheets
-        if SHEETS_LOGGING_AVAILABLE:
-            try:
-                sheets_logger.log_error(
-                    user_id=user_id,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
-                    context={"mode": mode}
-                )
-            except:
-                pass
         
         return {
             "reply": "An error occurred while processing your request. Please try again.",

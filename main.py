@@ -12,13 +12,6 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import mimetypes
 
-# Import Google Sheets logger
-try:
-    from google_sheets_logger import sheets_logger, calculate_token_cost
-    SHEETS_LOGGING_AVAILABLE = True
-except ImportError:
-    SHEETS_LOGGING_AVAILABLE = False
-
 # ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================
@@ -419,34 +412,6 @@ async def chat_with_file_endpoint(
             )
         
         logger.info(f"✓ Chat-with-file response sent to {user_id} ({response_data.get('processing_time', 0):.2f}s)")
-        
-        # Log to Google Sheets if file was uploaded
-        if SHEETS_LOGGING_AVAILABLE and file:
-            try:
-                file_info = {
-                    "name": file.filename,
-                    "size": len(file_content) if 'file_content' in locals() else 0,
-                    "type": file.content_type
-                }
-                
-                tokens_used = response_data.get("tokens_used")
-                model_name = "gpt-4o-mini" if mode == "fast" else "gpt-4o"
-                cost_estimate = calculate_token_cost(tokens_used, model_name) if tokens_used else 0.0
-                
-                sheets_logger.log_chat_interaction(
-                    user_id=user_id,
-                    user_message=text,
-                    ai_response=response_data["reply"],
-                    mode=mode,
-                    processing_time=response_data.get("processing_time", 0.0),
-                    tokens_used=tokens_used,
-                    model_name=model_name,
-                    success=True,
-                    has_file=True,
-                    file_info=file_info
-                )
-            except Exception as log_error:
-                logger.warning(f"Failed to log file upload to Sheets: {str(log_error)}")
         
         return ResponseModel(
             reply=response_data["reply"],

@@ -1484,7 +1484,7 @@
                         <textarea 
                             ref="messageInput"
                             v-model="userInput" 
-                            @keydown.enter.prevent="handleEnter"
+                            @keydown.enter="handleEnter"
                             @input="autoResize"
                             :placeholder="isAtLimit ? 'Message limit reached. Start new chat.' : 'Message AI Assistant...'"
                             :disabled="loading"
@@ -1914,8 +1914,30 @@
                 },
                 
                 handleEnter(e) {
-                    if (!e.shiftKey) {
+                    if (e.shiftKey) {
+                        // Shift+Enter: Allow new line (default behavior)
+                        return;
+                    } else {
+                        // Enter only: Send message
+                        e.preventDefault();
                         this.sendMessage();
+                    }
+                },
+                
+                // Typewriter effect function
+                async typewriterEffect(text, messageIndex) {
+                    const speed = 15; // milliseconds per character (faster = lower number)
+                    let currentText = '';
+                    
+                    for (let i = 0; i < text.length; i++) {
+                        currentText += text[i];
+                        this.messages[messageIndex].content = currentText;
+                        
+                        // Scroll to bottom as text appears
+                        this.scrollToBottom();
+                        
+                        // Small delay between characters
+                        await new Promise(resolve => setTimeout(resolve, speed));
                     }
                 },
                 
@@ -2026,8 +2048,14 @@
                         }
                         
                         const data = await response.json();
-                        // Append assistant reply
-                        this.messages.push({ role: 'assistant', content: data.reply });
+                        
+                        // Add assistant message with empty content first
+                        this.messages.push({ role: 'assistant', content: '' });
+                        const messageIndex = this.messages.length - 1;
+                        
+                        // Apply typewriter effect
+                        await this.typewriterEffect(data.reply, messageIndex);
+                        
                         // Update summary if backend returned one
                         if (data.summary) {
                             this.currentSummary = data.summary;
