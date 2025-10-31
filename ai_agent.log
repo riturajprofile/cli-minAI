@@ -505,3 +505,60 @@ pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: gpt-4o, bod
 2025-10-31 14:40:38,701 - ai - INFO - ✓ Request completed in 6.18s
 2025-10-31 14:40:38,701 - main - INFO - ✓ Chat response sent to 127.0.0.1 (6.18s)
 2025-10-31 14:43:46,456 - main - INFO - MinAI API Server Shutting Down
+2025-10-31 14:45:04,850 - ai - INFO - ✓ Environment variables validated successfully
+2025-10-31 14:45:04,891 - ai - INFO - ✓ AI models initialized successfully
+2025-10-31 14:45:04,891 - ai - INFO - ============================================================
+2025-10-31 14:45:04,892 - ai - INFO - MinAI initialized successfully
+2025-10-31 14:45:04,892 - ai - INFO - Config: MAX_MESSAGES=14, KEEP_LAST=6
+2025-10-31 14:45:04,892 - ai - INFO - ============================================================
+2025-10-31 14:45:04,893 - main - INFO - ✓ Static files mounted from: /home/riturajprofile/chatbot/basic-ai/static
+2025-10-31 14:45:04,903 - main - INFO - ============================================================
+2025-10-31 14:45:04,903 - main - INFO - MinAI API Server Starting
+2025-10-31 14:45:04,903 - main - INFO - Static directory: /home/riturajprofile/chatbot/basic-ai/static
+2025-10-31 14:45:04,904 - main - INFO - Max file size: 10.0MB
+2025-10-31 14:45:04,904 - main - INFO - Max message length: 10000 chars
+2025-10-31 14:45:04,904 - main - INFO - ============================================================
+2025-10-31 14:45:13,202 - main - INFO - Chat request from 127.0.0.1 - Mode: learning
+2025-10-31 14:45:13,203 - ai - INFO - Processing request - User: 127.0.0.1, Mode: learning
+2025-10-31 14:45:13,203 - ai - INFO - Initialized new history for user: 127.0.0.1
+2025-10-31 14:45:13,204 - ai - INFO - Calling AI model for user: 127.0.0.1
+2025-10-31 14:45:17,063 - httpx - INFO - HTTP Request: POST https://aipipe.org/openrouter/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-31 14:45:17,074 - ai - INFO - ✓ AI response received (34 characters)
+2025-10-31 14:45:17,074 - ai - INFO - ✓ Request completed in 3.87s
+2025-10-31 14:45:17,075 - main - INFO - ✓ Chat response sent to 127.0.0.1 (3.87s)
+2025-10-31 14:45:36,232 - main - INFO - Chat request from 127.0.0.1 - Mode: learning
+2025-10-31 14:45:36,233 - ai - INFO - Processing request - User: 127.0.0.1, Mode: learning
+2025-10-31 14:45:36,234 - ai - INFO - Calling AI model for user: 127.0.0.1
+2025-10-31 14:45:41,105 - httpx - INFO - HTTP Request: POST https://aipipe.org/openrouter/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-31 14:45:41,107 - ai - INFO - ✓ AI response received (953 characters)
+2025-10-31 14:45:41,108 - ai - INFO - ✓ Request completed in 4.88s
+2025-10-31 14:45:41,108 - main - INFO - ✓ Chat response sent to 127.0.0.1 (4.88s)
+2025-10-31 14:51:52,567 - main - INFO - Chat request from 127.0.0.1 - Mode: learning
+2025-10-31 14:51:52,568 - ai - INFO - Processing request - User: 127.0.0.1, Mode: learning
+2025-10-31 14:51:52,570 - ai - INFO - Calling AI model for user: 127.0.0.1
+2025-10-31 14:51:55,600 - httpx - INFO - HTTP Request: POST https://aipipe.org/openrouter/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-31 14:51:56,431 - ai - INFO - ✓ AI response received (306 characters)
+2025-10-31 14:51:56,431 - ai - INFO - ✓ Request completed in 3.86s
+2025-10-31 14:51:56,432 - main - INFO - ✓ Chat response sent to 127.0.0.1 (3.86s)
+2025-10-31 14:53:46,189 - main - INFO - Chat request from 127.0.0.1 - Mode: learning
+2025-10-31 14:53:46,190 - ai - INFO - Processing request - User: 127.0.0.1, Mode: learning
+2025-10-31 14:53:46,190 - ai - INFO - Calling AI model for user: 127.0.0.1
+2025-10-31 14:53:48,574 - httpx - INFO - HTTP Request: POST https://aipipe.org/openrouter/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-31 14:53:48,576 - ai - INFO - ✓ AI response received (141 characters)
+2025-10-31 14:53:48,576 - ai - INFO - ✓ Request completed in 2.39s
+2025-10-31 14:53:48,577 - main - INFO - ✓ Chat response sent to 127.0.0.1 (2.39s)
+2025-10-31 14:55:46,786 - main - INFO - Chat request from 127.0.0.1 - Mode: standard
+2025-10-31 14:55:46,787 - ai - INFO - Processing request - User: 127.0.0.1, Mode: standard
+2025-10-31 14:55:46,787 - ai - INFO - Calling AI model for user: 127.0.0.1
+2025-10-31 14:55:50,044 - httpx - INFO - HTTP Request: POST https://aipipe.org/openrouter/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-31 14:55:50,988 - ai - INFO - ✓ AI response received (249 characters)
+2025-10-31 14:55:50,988 - ai - INFO - ✓ Request completed in 4.20s
+2025-10-31 14:55:50,989 - main - INFO - ✓ Chat response sent to 127.0.0.1 (4.20s)
+2025-10-31 14:56:24,935 - main - INFO - Chat request from 127.0.0.1 - Mode: standard
+2025-10-31 14:56:24,936 - ai - INFO - Processing request - User: 127.0.0.1, Mode: standard
+2025-10-31 14:56:24,937 - ai - INFO - Calling AI model for user: 127.0.0.1
+2025-10-31 14:56:33,439 - httpx - INFO - HTTP Request: POST https://aipipe.org/openrouter/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-31 14:56:33,441 - ai - INFO - ✓ AI response received (888 characters)
+2025-10-31 14:56:33,442 - ai - INFO - ✓ Request completed in 8.51s
+2025-10-31 14:56:33,442 - main - INFO - ✓ Chat response sent to 127.0.0.1 (8.51s)
+2025-10-31 15:01:51,680 - main - INFO - MinAI API Server Shutting Down
