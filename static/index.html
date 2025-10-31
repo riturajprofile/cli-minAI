@@ -2052,6 +2052,11 @@
                             });
                         }
                         
+                        // Check if response is ok
+                        if (!response.ok) {
+                            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                        }
+                        
                         const data = await response.json();
                         
                         // Stop loading spinner, but keep typing flag active
@@ -2079,6 +2084,7 @@
                     } catch (error) {
                         console.error('Error:', error);
                         this.loading = false;
+                        this.isTyping = false; // Reset typing flag on error
                         this.messages.push({ 
                             role: 'assistant', 
                             content: 'Oops! Something went wrong. Mind trying again?' 
