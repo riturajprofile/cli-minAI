@@ -1410,6 +1410,14 @@
             
             <div class="chat-area" ref="chatArea">
                 <div class="chat-messages">
+                    <!-- Auto learning detection banner -->
+                    <div v-if="lastMeta && lastMeta.learning_auto_activated" class="auto-learning-banner" style="max-width:1000px; margin: 10px auto; padding:10px 16px; border-radius:8px; background:rgba(88,86,214,0.08); border:1px solid rgba(88,86,214,0.35);">
+                        <div style="display:flex; gap:10px; align-items:center; color:#5856D6; font-weight:600;">
+                            <span>📚 Learning mode auto-activated</span>
+                            <span v-if="lastMeta.detected_category" style="font-weight:500; color:var(--text-secondary);">• Category: {{ lastMeta.detected_category }}</span>
+                            <span v-if="lastMeta.topic_hint" style="font-weight:500; color:var(--text-secondary);">• Hint: {{ lastMeta.topic_hint }}</span>
+                        </div>
+                    </div>
                                         <!-- Conversation summary banner -->
                                         <div v-if="currentSummary" class="summary-banner" style="max-width:1000px; margin: 10px auto; padding:10px 16px; border-radius:8px; background:var(--bg-secondary); border:1px solid var(--border);">
                                             <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
@@ -1491,10 +1499,12 @@
                             rows="1"></textarea>
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-                        <div style="font-size:10px; color:var(--text-secondary); padding-bottom:2px; font-weight:600; letter-spacing:0.5px;">
+                        <div style="font-size:10px; color:var(--text-secondary); padding-bottom:2px; font-weight:600; letter-spacing:0.5px; display:flex; gap:6px; align-items:center;">
                             <span v-if="mode === 'fast'" style="color:#FF9500;">⚡ FAST</span>
                             <span v-else-if="mode === 'learning'" style="color:#5856D6;">📚 LEARN</span>
                             <span v-else style="color:var(--accent);">● STD</span>
+                            <span v-if="lastMeta && lastMeta.learning_auto_activated" style="color:#5856D6; opacity:0.8;">(auto)</span>
+                            <span v-if="lastMeta && lastMeta.detected_category" style="color:var(--text-secondary); opacity:0.8; text-transform:uppercase;">• {{ lastMeta.detected_category }}</span>
                         </div>
                         <button class="send-btn" @click="sendMessage" :disabled="loading || isTyping || !userInput.trim()">
                             <span v-if="!loading && !isTyping">➤</span>
@@ -1517,6 +1527,7 @@
                         currentSummary: null,
                         summaryExpanded: false,
                         mode: 'standard',
+                    lastMeta: null,
                     chatSessions: [],
                     currentSessionId: null,
                     userInput: '',
@@ -1787,6 +1798,7 @@
                     this.chatSessions.unshift(newSession);
                     this.currentSessionId = newSession.id;
                     this.messages = [];
+                    this.lastMeta = null;
                     this.saveChatSessions();
                     localStorage.setItem('lastSessionId', newSession.id);
                     
@@ -1805,6 +1817,7 @@
                     if (session) {
                         this.currentSessionId = sessionId;
                         this.messages = session.messages || [];
+                        this.lastMeta = null;
                         localStorage.setItem('lastSessionId', sessionId);
                         
                         this.$nextTick(() => {
@@ -2059,6 +2072,15 @@
                         
                         const data = await response.json();
                         
+                        // Sync UI mode with backend effective mode
+                        if (data.mode && data.mode !== this.mode) {
+                            this.mode = data.mode;
+                            localStorage.setItem('mode', this.mode);
+                        }
+
+                        // Store metadata for banners/indicators
+                        this.lastMeta = data.metadata || null;
+
                         // Stop loading spinner, but keep typing flag active
                         this.loading = false;
                         

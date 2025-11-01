@@ -76,6 +76,7 @@ MinAI is a full-stack AI chat application that combines the power of [Pydantic A
 
 - **Context-Aware Responses** - Maintains conversation flow with per-user history
 - **Learning Mode** - Optimized for educational interactions
+- **Universal Learning Kickoff** - Automatically detects learning intent (any topic) and starts with tailored, skimmable questions; adapts examples by category (programming, data analysis, statistics, viz, ML, databases, web-dev, math)
 - **Custom System Prompts** - Tailored personality and behavior
 - **Markdown Formatting** - AI responses with proper structure and formatting
 - **Multi-Model Support** - Compatible with various OpenAI models
@@ -288,6 +289,11 @@ response = requests.post(
 
 print(response.json()["reply"])
 ```
+
+### Universal Learning Behavior
+
+- You can keep `mode` as `standard`; if your message expresses a desire to learn (e.g., "teach me X", "how do I learn Y"), the assistant will automatically switch to learning mode and start with a short kickoff to tailor the plan.
+- When it detects a broad topic category (e.g., programming, statistics, visualization), it adapts examples and guidance accordingly while staying domain-agnostic by default.
 
 ---
 

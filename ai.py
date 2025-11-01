@@ -165,7 +165,7 @@ When users want to learn something:
 
 **Then provide engaging, structured learning:**
 1. Quick hook: Why this matters or what they'll be able to do
-2. Core concept in simple terms (2-3 sentences)
+2. Core concept in simple terms
 3. Clear, working example they can try immediately
 4. Explain what's happening and why it works
 5. One practical exercise or next step
@@ -366,6 +366,81 @@ One or two natural progressions when they're ready
 Your job is to be a patient guide who helps them discover and understand, not a lecturer who dumps information.
 """
 
+# A universal kickoff to ensure great starts for learning conversations
+LEARNING_KICKOFF_TEMPLATE = """
+### Learning Kickoff
+
+When the user wants to learn something, start with a short encouragement and ask a few quick questions to tailor the plan:
+
+- What's your current comfort level with the basics related to this topic?
+- Why this topic now (course, job prep, project, curiosity)?
+- What have you tried before? Where did you get stuck?
+- Which outcomes matter most right now? Examples:
+  - Foundations and core concepts
+  - Hands-on practice with small tasks
+  - Solving a specific assignment/project
+  - Building intuition with examples and visuals
+- Do you have data/code/materials to use? Any timeline/deadline?
+- Choose a path to proceed:
+  - A) Real problem: use your data/project and learn by doing
+  - B) Foundations: core concepts → key operations → small examples → mini project
+  - C) Immediate need: target your current assignment first
+
+Keep it friendly, skimmable, and easy to answer. Always favor small, runnable examples and brief explanations, with a tiny exercise at the end.
+"""
+
+# Optional category-specific hints (used only when detected)
+TOPIC_FOCUS_HINTS = {
+    "programming": """
+### Focus: Programming
+- Emphasize syntax, control flow, data structures, functions, modules
+- Show short runnable snippets with comments and a tiny exercise
+- Mention debugging tips and common errors
+""",
+    "data-analysis": """
+### Focus: Data Analysis
+- Use tabular data examples (CSV/Excel). Show loading, inspecting, filtering, grouping
+- Demonstrate cleaning patterns (missing values, types, duplicates)
+- Keep code blocks small and runnable with brief explanation
+""",
+    "statistics": """
+### Focus: Statistics
+- Explain intuition first (what/why), then show minimal code for tests
+- Include common tests (chi-square, t-test, ANOVA) and interpreting p-values
+- Clarify assumptions and typical pitfalls
+""",
+    "visualization": """
+### Focus: Visualization
+- Use simple datasets to show basic plots
+- Explain when to use each chart and how to label/format clearly
+- Encourage iterating on a plot by changing one parameter
+""",
+    "machine-learning": """
+### Focus: Machine Learning
+- Outline problem framing, features/labels, train/test split
+- Show a tiny pipeline (fit → predict → evaluate) with 1-2 metrics
+- Caution about overfitting; suggest simple baselines first
+""",
+    "databases": """
+### Focus: Databases/SQL
+- Demonstrate SELECT, WHERE, GROUP BY, JOIN with tiny tables
+- Explain query thinking: filter → aggregate → join
+- Include 1-2 practice queries
+""",
+    "web-dev": """
+### Focus: Web Development
+- Break down client/server responsibilities
+- Show a minimal example (e.g., small route or component) and a quick exercise
+- Mention tooling basics (dev server, hot reload, inspector)
+""",
+    "math": """
+### Focus: Math
+- Build intuition with diagrams/analogies, then formal definitions
+- Provide a small numeric example and a step-by-step walkthrough
+- Offer 1 practice problem with a hint
+""",
+}
+
 DEVELOPER_INSTRUCTIONS = """
 ---
 ## Developer Mode Activated
@@ -429,6 +504,52 @@ def validate_input(user_input: str, user_id: str, mode: str) -> None:
         raise ValidationError(f"Invalid mode '{mode}'. Must be one of: {valid_modes}")
     
     logger.debug(f"✓ Input validated: user_id={user_id}, mode={mode}, input_length={len(user_input)}")
+
+# =========================================================================
+# INTENT DETECTION (universal)
+# =========================================================================
+def detect_learning_intent(text: str) -> dict:
+    """Detect if the user is asking to learn and infer a broad topic category.
+
+    Returns:
+        {"is_learning": bool, "category": Optional[str], "topic_hint": Optional[str]}
+    """
+    try:
+        t = (text or "").lower()
+
+        learning_markers = [
+            "learn", "learning", "teach me", "how to learn", "start with",
+            "guide me", "explain", "help me understand", "i want to master",
+            "course", "beginner", "from scratch"
+        ]
+        is_learning = any(m in t for m in learning_markers)
+
+        # Broad categories with representative keywords
+        categories = {
+            "programming": ["python", "java", "javascript", "js", "c++", "golang", "go", "dsa", "algorithms", "oop", "git", "docker", "bash"],
+            "data-analysis": ["pandas", "numpy", "dataframe", "csv", "excel", "etl", "cleaning", "analysis"],
+            "statistics": ["chi square", "chi-square", "chi squared", "scipy", "stats", "hypothesis", "p-value", "anova", "t-test"],
+            "visualization": ["matplotlib", "seaborn", "plotly", "visualization", "charts", "plots"],
+            "machine-learning": ["sklearn", "regression", "classification", "clustering", "xgboost", "random forest", "ml"],
+            "databases": ["sql", "mysql", "postgres", "sqlite", "mongodb", "join", "aggregate"],
+            "web-dev": ["html", "css", "react", "vue", "node", "express", "django", "flask", "fastapi", "api"],
+            "math": ["calculus", "linear algebra", "probability", "matrix", "eigen", "derivative"]
+        }
+
+        detected_category = None
+        topic_hint = None
+        for cat, keys in categories.items():
+            for k in keys:
+                if k in t:
+                    detected_category = cat
+                    topic_hint = k
+                    break
+            if detected_category:
+                break
+
+        return {"is_learning": bool(is_learning or detected_category), "category": detected_category, "topic_hint": topic_hint}
+    except Exception:
+        return {"is_learning": False, "category": None, "topic_hint": None}
 
 # ============================================================================
 # HISTORY MANAGEMENT
@@ -561,12 +682,25 @@ def get_ai_response(
             developer_mode = True
             logger.info(f"Developer mode activated for user: {user_id}")
         
-        # Build system prompt based on mode
+        # Detect learning intent and auto-upgrade mode when appropriate
+        intent = detect_learning_intent(user_input)
+        learning_auto_activated = False
+        if mode == "standard" and intent.get("is_learning"):
+            mode = "learning"
+            learning_auto_activated = True
+            logger.info(f"Learning intent detected; switching to learning mode (category: {intent.get('category')}, hint: {intent.get('topic_hint')})")
+
+        # Build system prompt based on effective mode
         system_prompt = SYSTEM_PROMPT
-        
+
         if mode == "learning":
-            system_prompt = SYSTEM_PROMPT + "\n\n" + LEARNING_MODE_PROMPT
-            logger.debug("Learning mode activated")
+            system_prompt = SYSTEM_PROMPT + "\n\n" + LEARNING_MODE_PROMPT + "\n\n" + LEARNING_KICKOFF_TEMPLATE
+            cat = intent.get("category") if intent else None
+            if cat and cat in TOPIC_FOCUS_HINTS:
+                system_prompt += "\n\n" + TOPIC_FOCUS_HINTS[cat]
+            if intent and (intent.get("category") or intent.get("topic_hint")):
+                system_prompt += f"\n\n[Learning Topic Hint] Category: {intent.get('category') or 'general'}; Hint: {intent.get('topic_hint') or 'n/a'}. Tailor kickoff and examples accordingly."
+            logger.debug("Learning mode activated (with universal kickoff)")
         
         if developer_mode:
             system_prompt = system_prompt + "\n\n" + DEVELOPER_INSTRUCTIONS
@@ -651,7 +785,12 @@ def get_ai_response(
             "mode": mode,
             "success": True,
             "processing_time": processing_time,
-            "tokens_used": tokens_used
+            "tokens_used": tokens_used,
+            "metadata": {
+                "learning_auto_activated": learning_auto_activated,
+                "detected_category": intent.get("category") if intent else None,
+                "topic_hint": intent.get("topic_hint") if intent else None
+            }
         }
         
     except ValidationError as e:

@@ -337,6 +337,7 @@ async def chat_endpoint(message: Message, request: Request):
             summary=response_data.get("summary"),
             mode=response_data.get("mode"),
             processing_time=response_data.get("processing_time"),
+            metadata=response_data.get("metadata"),
             success=True
         )
     
@@ -435,7 +436,7 @@ async def chat_with_file_endpoint(
             summary=response_data.get("summary"),
             mode=response_data.get("mode"),
             processing_time=response_data.get("processing_time"),
-            metadata={"file_processed": file is not None} if file else None,
+            metadata=(response_data.get("metadata") or {}) | ({"file_processed": file is not None} if file else {}),
             success=True
         )
     
