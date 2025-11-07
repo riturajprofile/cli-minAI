@@ -1039,12 +1039,19 @@
             /* Mode toggle adjustments for mobile */
             .mode-toggle {
                 padding: 3px !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
             }
             
             .mode-btn {
                 padding: 6px 10px !important;
                 font-size: 11px !important;
                 gap: 4px !important;
+                flex-shrink: 0 !important;
+            }
+            
+            .mode-btn span {
+                display: inline !important;
             }
             
             .mode-btn svg {
@@ -1344,31 +1351,39 @@
                         <button
                             :class="['mode-btn', { active: mode === 'learning' }]"
                             @click="setMode('learning')"
-                            title="Detailed learning mode with examples">
+                            title="Patient teaching mode with examples and exercises">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                                 <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                             </svg>
-                            Learn
+                            <span>Learn</span>
                         </button>
                         <button
-                            :class="['mode-btn', { active: mode === 'standard' }]"
-                            @click="setMode('standard')"
-                            title="Balanced standard mode">
+                            :class="['mode-btn', { active: mode === 'friend' }]"
+                            @click="setMode('friend')"
+                            title="Affectionate, playful girlfriend mode with flirty energy">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                             </svg>
-                            Standard
+                            <span>Friend</span>
+                        </button>
+                        <button
+                            :class="['mode-btn', { active: mode === 'guardian' }]"
+                            @click="setMode('guardian')"
+                            title="Protective, wise mentor mode for guidance and safety">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                            <span>Guardian</span>
                         </button>
                         <button
                             :class="['mode-btn', { active: mode === 'fast' }]"
                             @click="setMode('fast')"
-                            title="Quick concise responses">
+                            title="Quick concise responses using fast model">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                             </svg>
-                            Fast
+                            <span>Fast</span>
                         </button>
                     </div>
                 </div>
@@ -1502,6 +1517,8 @@
                         <div style="font-size:10px; color:var(--text-secondary); padding-bottom:2px; font-weight:600; letter-spacing:0.5px; display:flex; gap:6px; align-items:center;">
                             <span v-if="mode === 'fast'" style="color:#FF9500;">⚡ FAST</span>
                             <span v-else-if="mode === 'learning'" style="color:#5856D6;">📚 LEARN</span>
+                            <span v-else-if="mode === 'friend'" style="color:#FF2D55;">💕 FRIEND</span>
+                            <span v-else-if="mode === 'guardian'" style="color:#34C759;">🛡️ GUARDIAN</span>
                             <span v-else style="color:var(--accent);">● STD</span>
                             <span v-if="lastMeta && lastMeta.learning_auto_activated" style="color:#5856D6; opacity:0.8;">(auto)</span>
                             <span v-if="lastMeta && lastMeta.detected_category" style="color:var(--text-secondary); opacity:0.8; text-transform:uppercase;">• {{ lastMeta.detected_category }}</span>
@@ -1526,7 +1543,7 @@
                     messages: [],
                         currentSummary: null,
                         summaryExpanded: false,
-                        mode: 'standard',
+                        mode: 'learning',
                     lastMeta: null,
                     chatSessions: [],
                     currentSessionId: null,
@@ -1603,7 +1620,7 @@
                 });
 
                 // Load preferred mode
-                const savedMode = localStorage.getItem('mode') || 'standard';
+                const savedMode = localStorage.getItem('mode') || 'learning';
                 this.mode = savedMode;
                 
                 // Add click listener to refocus input when clicking on chat area

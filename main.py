@@ -15,7 +15,6 @@ import mimetypes
 # ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================
-# Configure logging with fallback for environments without write access
 try:
     logging.basicConfig(
         level=logging.INFO,
@@ -26,7 +25,6 @@ try:
         ]
     )
 except (PermissionError, OSError):
-    # Fallback to console-only logging (for Railway/Docker environments)
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -39,12 +37,19 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 load_dotenv()
 
-# Validate required environment variables
-REQUIRED_ENV_VARS = ["OPENAI_API_KEY"]
-missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
-if missing_vars:
-    logger.critical(f"Missing environment variables: {', '.join(missing_vars)}")
-    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+def validate_environment() -> None:
+    """Validate required environment variables"""
+    required_vars = ["OPENAI_API_KEY"]
+    missing = [var for var in required_vars if not os.getenv(var)]
+    
+    if missing:
+        error_msg = f"Missing required environment variables: {', '.join(missing)}"
+        logger.critical(error_msg)
+        raise ValueError(error_msg)
+    
+    logger.info("✓ Environment variables validated")
+
+validate_environment()
 
 # ============================================================================
 # APP CONFIGURATION
@@ -97,7 +102,7 @@ config = Config()
 class Message(BaseModel):
     """Chat message model"""
     text: str = Field(..., min_length=1, max_length=config.MAX_MESSAGE_LENGTH)
-    mode: str = Field(default="standard", pattern="^(standard|learning|fast)$")
+    mode: str = Field(default="learning", pattern="^(learning|friend|guardian|fast)$")
     
     @validator('text')
     def validate_text(cls, v):
@@ -138,7 +143,6 @@ def get_client_id(request: Request) -> str:
     """
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
-        # X-Forwarded-For can contain multiple IPs, take the first one
         client_ip = forwarded_for.split(",")[0].strip()
     else:
         client_ip = request.client.host if request.client else "unknown"
@@ -177,10 +181,8 @@ async def extract_text_from_file(file: UploadFile) -> tuple[str, Optional[str]]:
         content = await file.read()
         filename = file.filename.lower()
         
-        # Validate file size
         validate_file_size(len(content))
         
-        # Handle text files
         if is_supported_text_file(filename):
             try:
                 text_content = content.decode('utf-8')
@@ -190,7 +192,6 @@ async def extract_text_from_file(file: UploadFile) -> tuple[str, Optional[str]]:
                 logger.warning(f"Failed to decode file as UTF-8: {file.filename}")
                 return "", "Could not decode file. Please ensure it's UTF-8 encoded."
         
-        # Handle PDF files
         elif is_supported_pdf_file(filename):
             try:
                 import PyPDF2
@@ -306,16 +307,16 @@ async def chat_endpoint(message: Message, request: Request):
     Standard chat endpoint.
     
     **Modes:**
-    - `standard`: Normal conversational responses
-    - `learning`: Extended teaching mode with progressive examples
-    - `fast`: Quick, concise answers
+    - `learning`: Patient teaching mode with progressive examples and exercises
+    - `friend`: Affectionate, playful girlfriend mode with flirty, supportive energy
+    - `guardian`: Protective, wise mentor mode for guidance and safety
+    - `fast`: Quick, concise answers using fast model
     """
     user_id = get_client_id(request)
     
     try:
         logger.info(f"Chat request from {user_id} - Mode: {message.mode}")
         
-        # Get AI response in thread pool
         response_data = await run_in_threadpool(
             get_ai_response,
             message.text,
@@ -354,7 +355,7 @@ async def chat_endpoint(message: Message, request: Request):
 async def chat_with_file_endpoint(
     request: Request,
     text: str = Form(...),
-    mode: str = Form(default="standard"),
+    mode: str = Form(default="learning"),
     file: Optional[UploadFile] = File(None)
 ):
     """
@@ -366,20 +367,18 @@ async def chat_with_file_endpoint(
     
     **Parameters:**
     - `text`: Your message/question
-    - `mode`: Response mode (standard/learning/fast)
+    - `mode`: Response mode (learning/friend/guardian/fast)
     - `file`: Optional file attachment
     """
     user_id = get_client_id(request)
     
     try:
-        # Validate mode
-        if mode not in ["standard", "learning", "fast"]:
+        if mode not in ["learning", "friend", "guardian", "fast"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid mode '{mode}'. Must be: standard, learning, or fast"
+                detail=f"Invalid mode '{mode}'. Must be: learning, friend, guardian, or fast"
             )
         
-        # Validate text length
         if len(text) > config.MAX_MESSAGE_LENGTH:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -396,7 +395,6 @@ async def chat_with_file_endpoint(
         
         combined_message = text.strip()
         
-        # Process file if provided
         if file:
             logger.info(f"Processing file: {file.filename} ({file.content_type})")
             
@@ -414,7 +412,6 @@ async def chat_with_file_endpoint(
                 combined_message = f"{text.strip()}\n{file_context}"
                 logger.info(f"✓ File content added to message ({len(file_content)} chars)")
         
-        # Get AI response
         response_data = await run_in_threadpool(
             get_ai_response,
             combined_message,
@@ -458,7 +455,6 @@ async def clear_history(user_id: str, request: Request):
     """
     request_user_id = get_client_id(request)
     
-    # Security check: users can only clear their own history
     if user_id != request_user_id:
         logger.warning(f"Unauthorized history clear attempt: {request_user_id} tried to clear {user_id}")
         raise HTTPException(
