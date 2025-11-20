@@ -1,0 +1,273 @@
+:root {
+    --bg-color: #0a0a0a;
+    --text-color: #33ff00;
+    --text-dim: #1a8000;
+    --text-alert: #ff3333;
+    --text-info: #33ccff;
+    --font-stack: 'Fira Code', 'Courier New', monospace;
+    --glow: 0 0 5px rgba(51, 255, 0, 0.5);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-stack);
+    height: 100vh;
+    overflow: hidden;
+    font-size: 16px;
+}
+
+/* CRT Effect */
+.crt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 999;
+}
+
+.terminal-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.output-area {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.output-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.output-area::-webkit-scrollbar-thumb {
+    background: var(--text-dim);
+}
+
+.line {
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.line.system {
+    color: var(--text-info);
+}
+
+.line.error {
+    color: var(--text-alert);
+}
+
+.line.user {
+    color: var(--text-color);
+    font-weight: bold;
+}
+
+.line.ai {
+    color: #ffffff;
+}
+
+.input-line {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 20, 0, 0.8);
+    padding: 10px;
+    border-top: 1px solid var(--text-dim);
+}
+
+.prompt {
+    color: var(--text-color);
+    margin-right: 10px;
+    text-shadow: var(--glow);
+    font-weight: bold;
+}
+
+#commandInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-family: var(--font-stack);
+    font-size: 16px;
+    outline: none;
+    caret-color: var(--text-color);
+}
+
+/* Modal Styling */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #000;
+    border: 2px solid var(--text-color);
+    width: 500px;
+    box-shadow: var(--glow);
+}
+
+.modal-header {
+    background: var(--text-color);
+    color: #000;
+    padding: 5px 10px;
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-family: var(--font-stack);
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-info);
+}
+
+.terminal-input {
+    width: 100%;
+    background: #111;
+    border: 1px solid var(--text-dim);
+    color: #fff;
+    padding: 8px;
+    font-family: var(--font-stack);
+}
+
+.terminal-input:focus {
+    border-color: var(--text-color);
+    outline: none;
+}
+
+.terminal-btn {
+    background: var(--text-dim);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    font-family: var(--font-stack);
+    cursor: pointer;
+    width: 100%;
+}
+
+.terminal-btn:hover {
+    background: var(--text-color);
+    color: #000;
+}
+
+/* Editor Styling */
+.editor-modal {
+    width: 80%;
+    height: 80%;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-modal .modal-body {
+    flex: 1;
+    display: flex;
+}
+
+.terminal-editor {
+    width: 100%;
+    height: 100%;
+    background: #111;
+    color: var(--text-color);
+    border: none;
+    padding: 10px;
+    font-family: var(--font-stack);
+    resize: none;
+    outline: none;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.editor-help {
+    font-size: 0.8em;
+    color: var(--text-dim);
+}
+
+/* Vim Editor Specific Styles */
+#editorModal {
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.vim-wrapper {
+    max-width: 1200px;
+    max-height: 90vh;
+}
+
+#editorModal>* {
+    width: 100%;
+    max-width: 1200px;
+    height: calc(100vh - 80px);
+    margin: 0 auto;
+    background: #000;
+    border: 2px solid var(--text-color);
+    box-shadow: var(--glow);
+    display: flex;
+    flex-direction: column;
+}
+
+.vim-header {
+    background: var(--text-color);
+    color: #000;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.vim-line-numbers {
+    flex-shrink: 0;
+}
+
+.vim-content {
+    cursor: text;
+}
+
+.vim-content:focus {
+    outline: 2px solid var(--text-color);
+    outline-offset: -2px;
+}
+
+.vim-status {
+    flex-shrink: 0;
+}
+
+.vim-command {
+    flex-shrink: 0;
+}
