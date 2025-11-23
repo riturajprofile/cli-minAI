@@ -569,7 +569,73 @@ OPTIONS
 EXAMPLES
     curl https://api.example.com/data
     curl -I https://google.com
-    curl https://example.com/data.json -o data.json`
+    curl https://example.com/data.json -o data.json`,
+
+            'bgset': `Command: bgset - Set terminal background
+
+SYNOPSIS
+    bgset [preset|url|none|list]
+
+DESCRIPTION
+    Set or change the terminal background image.
+    Choose from curated presets or use custom URLs.
+
+OPTIONS
+    list        Show all available presets
+    none        Remove background image
+    preset      Use a preset (cyberpunk, matrix, etc.)
+    url         Use custom image URL
+
+EXAMPLES
+    bgset list                  List all presets
+    bgset cyberpunk             Use cyberpunk preset
+    bgset https://image.jpg     Use custom URL
+    bgset none                  Remove background`,
+
+            'calc': `Command: calc - Simple calculator
+
+SYNOPSIS
+    calc [EXPRESSION]
+
+DESCRIPTION
+    Evaluate mathematical expressions.
+    Supports basic arithmetic (+, -, *, /, %, ^, ()) and Math functions.
+
+EXAMPLES
+    calc 2 + 2
+    calc 10 * 5
+    calc Math.sqrt(16)`,
+
+            'theme': `Command: theme - Change terminal theme
+
+SYNOPSIS
+    theme [list | set <name>]
+
+DESCRIPTION
+    Change the color scheme of the terminal.
+
+EXAMPLES
+    theme list              List available themes
+    theme set ubuntu        Switch to Ubuntu theme
+    theme set cyberpunk     Switch to Cyberpunk theme`,
+
+            'cmatrix': `Command: cmatrix - Matrix digital rain effect
+
+SYNOPSIS
+    cmatrix
+
+DESCRIPTION
+    Displays the "digital rain" effect from The Matrix.
+    Press any key to exit.`,
+
+            'neofetch': `Command: neofetch - System information
+
+SYNOPSIS
+    neofetch
+
+DESCRIPTION
+    Displays system information and an ASCII logo.
+    Shows OS, Host, Kernel, Uptime, Resolution, etc.`
         };
 
         // Create file nodes for each command
@@ -1045,7 +1111,7 @@ export class CommandParser {
             'cat', 'echo', 'head', 'tail', 'wc', 'grep', 'edit', 'nano', 'vim',
             'date', 'whoami', 'uname', 'df', 'clear', 'help', 'man', 'history',
             'download', 'alias', 'set', 'exit', 'chat', '/config', '/chat',
-            'whatis', 'which', 'ai', 'ping', 'curl'
+            'whatis', 'which', 'ai', 'ping', 'curl', 'calc', 'theme', 'cmatrix', 'neofetch', 'bgset', 'json'
         ];
 
         // Load aliases from configuration file
@@ -1164,7 +1230,7 @@ export class CommandParser {
         }
 
         // Parse flags from user input
-        const cleanParams = [];
+        let cleanParams = [];
         params.forEach(p => {
             if (p.startsWith('-')) {
                 p.slice(1).split('').forEach(f => flags[f] = true);
@@ -1174,6 +1240,12 @@ export class CommandParser {
         });
 
         if (this.validCommands.includes(resolvedCmd)) {
+            // Expand wildcards for commands that work with files
+            const fileCommands = ['ls', 'cat', 'rm', 'cp', 'mv', 'head', 'tail', 'wc', 'grep'];
+            if (fileCommands.includes(resolvedCmd)) {
+                cleanParams = this._expandGlobs(cleanParams);
+            }
+
             // Execute Command
             await this._execute(resolvedCmd, cleanParams, flags, input);
             return;
@@ -1192,9 +1264,38 @@ export class CommandParser {
                 return { type: 'chat', content: input };
             }
         }
-
         // 7. Default Error
         this.ui.print(`Command not found: ${cmd}. Type 'help' for available commands.`, 'error');
+    }
+
+    _expandGlobs(params) {
+        const expanded = [];
+        const cwd = this.fs._getCwdNode();
+
+        for (const param of params) {
+            if (param.includes('*')) {
+                // Convert glob pattern to regex
+                const pattern = param
+                    .replace(/\./g, '\\.')
+                    .replace(/\*/g, '.*');
+                const regex = new RegExp('^' + pattern + '$');
+
+                // Match against files in current directory
+                const matches = Object.keys(cwd.children || {})
+                    .filter(name => regex.test(name));
+
+                if (matches.length > 0) {
+                    expanded.push(...matches);
+                } else {
+                    // No matches, keep original
+                    expanded.push(param);
+                }
+            } else {
+                expanded.push(param);
+            }
+        }
+
+        return expanded;
     }
 
     _findClosestCommand(cmd) {
@@ -1332,6 +1433,20 @@ export class CommandParser {
                 break;
             case 'ping': output = await this._ping(params[0]); break;
             case 'curl': output = await this._curl(params, flags); break;
+            case 'calc': output = this._calc(params); break;
+            case 'theme': output = this._theme(params); break;
+            case 'bgset': output = this._bgset(params); break;
+            case 'cmatrix': this.ui.toggleMatrix(); return;
+            case 'neofetch':
+                output = this._neofetch();
+                break;
+            case 'json':
+                if (params.length === 0) {
+                    output = 'Usage: json <file>';
+                } else {
+                    output = this._jsonFormat(params[0]);
+                }
+                break;
             case 'edit':
             case 'nano':
             case 'vim':
@@ -1346,8 +1461,15 @@ export class CommandParser {
                 this.ui.setPrompt('[AI Chat Mode] >');
                 return;
             case 'ai':
-                output = await this._chat(params.join(' '));
-                break;
+                // Switch to Agent mode using the UI button
+                const agentBtn = document.querySelector('[data-mode="agent"]');
+                if (agentBtn) {
+                    agentBtn.click();
+                    return 'Switched to Agent mode (✨). Type naturally or use direct commands.';
+                } else {
+                    return 'Agent mode not available. Click the ✨ button to enable it.';
+                }
+
             case 'alias':
                 if (params.length === 0) {
                     // List all aliases
@@ -1587,13 +1709,192 @@ export class CommandParser {
         }
     }
 
+    _calc(params) {
+        if (params.length === 0) return 'Usage: calc [expression]';
+        const expr = params.join(' ');
+        try {
+            const result = new Function('return ' + expr)();
+            return result.toString();
+        } catch (e) {
+            return 'Error: Invalid expression';
+        }
+    }
+
+    _theme(params) {
+        const themes = ['cyberpunk', 'ubuntu', 'hacker', 'retro', 'dracula', 'monokai', 'nord', 'solarized-dark', 'solarized-light', 'gruvbox', 'one-dark', 'tokyo-night'];
+        if (params.length === 0 || params[0] === 'list') {
+            return `Available themes (${themes.length}):\n${themes.join('\n')}`;
+        }
+        if (params[0] === 'set') {
+            const theme = params[1];
+            if (themes.includes(theme)) {
+                this.ui.setTheme(theme);
+                return `Theme set to ${theme}`;
+            }
+            return `Unknown theme: ${theme}. Try 'theme list'`;
+        }
+        return 'Usage: theme [list | set <name>]';
+    }
+
+    _bgset(params) {
+        // Preset backgrounds for each theme
+        const presets = {
+            'cyberpunk': 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1920&q=80',
+            'cyberpunk-alt': 'https://images.unsplash.com/photo-1563089145-599997674d42?w=1920&q=80',
+            'hacker': 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1920&q=80',
+            'matrix': 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=1920&q=80',
+            'neon-city': 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1920&q=80',
+            'tokyo-night': 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1920&q=80',
+            'nord': 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=1920&q=80',
+            'retro': 'https://images.unsplash.com/photo-1579547621113-e4bb2a19bdd6?w=1920&q=80',
+            'space': 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1920&q=80',
+            'abstract': 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1920&q=80',
+            'mountains': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80',
+            'ocean': 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1920&q=80',
+            'forest': 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80',
+            'gradient': 'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=1920&q=80'
+        };
+
+        if (params.length === 0) {
+            return `Usage: bgset [preset|url|none|list]
+
+Examples:
+  bgset cyberpunk       Use cyberpunk preset
+  bgset list            Show all presets  
+  bgset https://...     Use custom URL
+  bgset none            Remove background`;
+        }
+
+        const input = params[0];
+
+        // List presets
+        if (input === 'list') {
+            let output = 'Available background presets:\n\n';
+            output += '🌆 Theme Matched:\n';
+            output += '  cyberpunk, cyberpunk-alt, hacker, matrix\n';
+            output += '  neon-city, tokyo-night, nord, retro\n\n';
+            output += '🌍 Nature:\n';
+            output += '  mountains, ocean, forest\n\n';
+            output += '🎨 Abstract:\n';
+            output += '  space, abstract, gradient\n\n';
+            output += 'Usage: bgset <preset-name>';
+            return output;
+        }
+
+        // Remove background
+        if (input === 'none') {
+            document.documentElement.style.setProperty('--bg-image', 'none');
+            localStorage.setItem('minai_bg', 'none');
+            return 'Background image removed';
+        }
+
+        // Check if it's a preset
+        if (presets[input]) {
+            const url = presets[input];
+            this.ui.print('Loading background image...', 'system');
+
+            // Preload image
+            const img = new Image();
+            img.onload = () => {
+                document.documentElement.style.setProperty('--bg-image', `url('${url}')`);
+                localStorage.setItem('minai_bg', url);
+                this.ui.print(`✓ Background loaded: ${input}`, 'system');
+            };
+            img.onerror = () => {
+                this.ui.print(`✗ Failed to load image. Check your internet connection.`, 'error');
+            };
+            img.src = url;
+
+            return '';
+        }
+
+        // Treat as custom URL
+        const url = input;
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            this.ui.print('Loading background image...', 'system');
+
+            // Preload image
+            const img = new Image();
+            img.onload = () => {
+                document.documentElement.style.setProperty('--bg-image', `url('${url}')`);
+                localStorage.setItem('minai_bg', url);
+                this.ui.print(`✓ Background loaded from: ${url}`, 'system');
+            };
+            img.onerror = () => {
+                this.ui.print(`✗ Failed to load image from URL. Check the URL and CORS permissions.`, 'error');
+            };
+            img.src = url;
+
+            return '';
+        }
+
+        return `Invalid input. Use 'bgset list' to see presets, or provide a valid https:// URL.`;
+    }
+
+    _neofetch() {
+        const os = 'MinAI OS v3.0';
+        const host = 'minai-terminal';
+        const kernel = 'WebKernel 5.10';
+        const uptime = Math.floor(performance.now() / 60000) + ' mins';
+        const pkgs = Object.keys(this.fs.root.children['command'].children).length;
+        const shell = 'minai-sh';
+        const res = `${window.screen.width}x${window.screen.height}`;
+        const theme = localStorage.getItem('minai_theme') || 'cyberpunk';
+        const cpu = 'Simulated CPU';
+        const memory = (navigator.deviceMemory ? navigator.deviceMemory + 'GB' : 'Unknown');
+
+        const art = `
+    <span style="color: #00d4ff;">       _,met$$$$$gg.</span>          <span style="color: #fff;">user</span>@<span style="color: #fff;">minai</span>
+    <span style="color: #00d4ff;">    ,g$$$$$$$$$$$$$$$P.</span>       ────────────────
+    <span style="color: #00d4ff;">  ,g$$P"     """Y$$.".  </span>      <span style="color: #ff6b9d;">OS:</span> MinAI OS v3.0  
+    <span style="color: #00d4ff;"> ,$$P'              \`$$$.</span>     <span style="color: #ff6b9d;">Shell:</span> minai-sh
+    <span style="color: #00d4ff;">',$$P       ,ggs.     \`$$b:</span>   <span style="color: #ff6b9d;">Terminal:</span> MinAI Terminal
+    <span style="color: #00d4ff;">\`d$$'     ,$P"'   .    $$$</span>   <span style="color: #ff6b9d;">Theme:</span> ${document.body.className.replace('theme-', '') || 'default'}
+    <span style="color: #00d4ff;"> $$P      d$'     ,    $$P</span>    <span style="color: #ff6b9d;">Uptime:</span> ${Math.floor(performance.now() / 1000 / 60)} minutes
+    <span style="color: #00d4ff;"> $$:      $$.   -    ,d$$'</span>    <span style="color: #ff6b9d;">Memory:</span> Virtual FS
+    <span style="color: #00d4ff;"> $$;      Y$b._   _,d$P'</span>      <span style="color: #ff6b9d;">Browser:</span> ${navigator.userAgent.split(' ').slice(-2).join(' ')}
+    <span style="color: #00d4ff;"> Y$$.    \`.\`"Y$$$P"'</span>         <span style="color: #ff6b9d;">Commands:</span> ${this.validCommands.length}
+    <span style="color: #00d4ff;"> \`$$b      "-.__  </span>            
+    <span style="color: #00d4ff;">  \`Y$$</span>                        ████████████████
+    <span style="color: #00d4ff;">   \`Y$$.</span>                     
+    <span style="color: #00d4ff;">     \`$$b.</span>                   Type <span style="color: #8be9fd;">help</span> for commands
+    <span style="color: #00d4ff;">       \`Y$$b.</span>
+    <span style="color: #00d4ff;">          \`"Y$b._</span>
+    <span style="color: #00d4ff;">              \`"""</span>
+        `;
+        return art;
+    }
+
+    _jsonFormat(filepath) {
+        const content = this.fs.cat(filepath);
+        if (content.startsWith('Error')) return content;
+
+        try {
+            const parsed = JSON.parse(content);
+            const formatted = JSON.stringify(parsed, null, 2);
+
+            // Add syntax highlighting for JSON
+            const highlighted = formatted
+                .replace(/("[\w]+")(:\s?)([^,\}\]]+)/g, '<span style="color: #ff79c6;">$1</span>$2<span style="color: #50fa7b;">$3</span>')
+                .replace(/"([^"]+)":/g, '<span style="color: #8be9fd;">"$1"</span>:')
+                .replace(/: "([^"]+)"/g, ': <span style="color: #f1fa8c;">"$1"</span>')
+                .replace(/: (\d+)/g, ': <span style="color: #bd93f9;">$1</span>')
+                .replace(/: (true|false|null)/g, ': <span style="color: #ffb86c;">$1</span>');
+
+            return `<pre style="font-family: monospace; line-height: 1.5;">${highlighted}</pre>`;
+        } catch (e) {
+            return `Error: Invalid JSON - ${e.message}`;
+        }
+    }
+
     _getHelp() {
         const categories = {
             'File System': ['ls', 'cd', 'pwd', 'mkdir', 'rmdir', 'touch', 'rm', 'cp', 'mv', 'tree'],
             'Content': ['cat', 'echo', 'head', 'tail', 'wc', 'grep', 'edit', 'vim'],
-            'System': ['date', 'whoami', 'uname', 'clear', 'download', 'history', 'exit', 'ping', 'curl'],
+            'System': ['date', 'whoami', 'uname', 'clear', 'download', 'history', 'exit', 'ping', 'curl', 'theme', 'cmatrix', 'neofetch'],
+            'Tools': ['calc', 'json'],
             'Info & Config': ['whatis', 'which', 'man', 'help', 'alias', 'set', '/config'],
-            'AI Chat': ['chat', '/chat', 'ai: [query]']
+            'AI': ['ai (switch to Agent mode ✨)']
         };
 
         let html = '<div style="color: #a8a8a8; margin-bottom: 10px;">MinAI Terminal v3.0 Help</div>';
@@ -1608,6 +1909,7 @@ export class CommandParser {
             'File System': '#4CAF50',
             'Content': '#2196F3',
             'System': '#FFC107',
+            'Tools': '#FF9800',
             'Info & Config': '#9C27B0',
             'AI Chat': '#E91E63'
         };
@@ -1758,7 +2060,29 @@ export class CommandParser {
                 ],
                 example: 'curl https://api.example.com/data'
             },
-
+            'bgset': {
+                desc: 'Set terminal background image',
+                usage: 'bgset [preset|url|none|list]',
+                example: 'bgset cyberpunk'
+            },
+            'calc': {
+                desc: 'Simple calculator',
+                usage: 'calc [expression]',
+                example: 'calc 2 + 2'
+            },
+            'theme': {
+                desc: 'Change terminal theme',
+                usage: 'theme [list | set <name>]',
+                example: 'theme set ubuntu'
+            },
+            'cmatrix': {
+                desc: 'Matrix digital rain effect',
+                usage: 'cmatrix'
+            },
+            'neofetch': {
+                desc: 'System information',
+                usage: 'neofetch'
+            },
             'uname': {
                 desc: 'Print system information',
                 usage: 'uname [-a]',

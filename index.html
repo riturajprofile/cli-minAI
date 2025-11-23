@@ -13,16 +13,36 @@
 </head>
 
 <body>
+  <canvas id="matrixCanvas"></canvas>
   <div class="crt-overlay"></div>
-  <div class="terminal-container">
-    <div id="output" class="output-area">
-      <div class="line system">MinAI Terminal v2.0.0</div>
-      <div class="line system">Type '/help' for commands.</div>
-      <div class="line system">---------------------------</div>
+  <div class="terminal-window">
+    <div class="window-header">
+      <div class="window-buttons">
+        <span class="btn close"></span>
+        <span class="btn minimize"></span>
+        <span class="btn maximize"></span>
+      </div>
+      <div class="window-title">user@minai:~</div>
     </div>
-    <div class="input-line">
-      <span class="prompt">user@minai:~$</span>
-      <input type="text" id="commandInput" autocomplete="off" spellcheck="false" autofocus>
+    <div class="terminal-container">
+      <div id="output" class="output-area"></div>
+      <div class="input-area">
+        <div class="input-line">
+          <span class="prompt" id="promptText">user@minai:~$</span>
+          <input type="text" id="commandInput" placeholder="Type a command... (try 'help')" autocomplete="off"
+            spellcheck="false" autofocus>
+        </div>
+        <div class="mode-switcher">
+          <button class="mode-btn active" data-mode="sh">
+            <span class="mode-icon">$</span>
+            <span class="mode-label">sh</span>
+          </button>
+          <button class="mode-btn" data-mode="agent">
+            <span class="mode-icon">✨</span>
+            <span class="mode-label">Agent</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
