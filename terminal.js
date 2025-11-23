@@ -1454,12 +1454,7 @@ export class CommandParser {
                 this.ui.openEditor(params[0], fileContent.startsWith('Error') ? '' : fileContent);
                 return;
             case '/config': this.ui.openSettings(); return;
-            case 'chat':
-            case '/chat':
-                this.mode = 'chat';
-                this.ui.print('Switched to Chat Mode. Type "exit" to return.', 'system');
-                this.ui.setPrompt('[AI Chat Mode] >');
-                return;
+            case 'exit': return 'Type "exit" is not needed. Just close the terminal.';
             case 'ai':
                 // Switch to Agent mode using the UI button
                 const agentBtn = document.querySelector('[data-mode="agent"]');
@@ -1556,20 +1551,6 @@ export class CommandParser {
 
         const regex = new RegExp(pattern, flags.i ? 'i' : '');
         return lines.filter(l => regex.test(l)).join('\n');
-    }
-
-    async _chat(params) {
-        if (!params) {
-            this.mode = 'chat';
-            this.ui.print('Entered AI Chat Mode. Type "exit" to return to command mode.', 'system');
-            this.ui.setPrompt('ai> ');
-            return '';
-        }
-
-        if (this.aiHandler) {
-            return await this.aiHandler(params);
-        }
-        return 'AI not available';
     }
 
     async _ping(host) {
