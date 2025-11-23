@@ -293,5 +293,5 @@ document.addEventListener('click', (e) => {
 updatePrompt();
 
 // Welcome Message
-uiHandler.print('Welcome to MinAI Terminal v3.0', 'system');
-uiHandler.print('Type "help" for commands, "cat /README" for docs, or "chat" to talk to AI.', 'system');
+const welcome = fs.cat('/home/welcome.txt');
+uiHandler.print(welcome, 'system');

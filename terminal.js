@@ -74,44 +74,12 @@ For help: help | man <command> | whatis <command>`,
                         'welcome.txt': {
                             type: 'file',
                             name: 'welcome.txt',
-                            content: `Welcome to MinAI Terminal v3.0!
+                            content: `Hi, I'm Ritu Raj.
+I'm a Data Science student at IIT Madras on a mission to transform complex data into meaningful stories and intelligent solutions.
 
-Quick Start Guide:
-==================
-1. File Navigation
-   - ls          : List files
-   - cd <dir>    : Change directory
-   - pwd         : Show current directory
-   - tree        : View directory tree
+My journey combines rigorous academic training with hands-on project experience, allowing me to bridge the gap between theoretical concepts and real-world impact.
 
-2. File Management
-   - touch <file>      : Create empty file
-   - mkdir <dir>       : Create directory
-   - rm <file>         : Remove file
-   - edit <file>       : Open Vim-like editor
-
-3. Content Operations
-   - cat <file>        : Display file contents
-   - echo <text>       : Display text
-   - echo "text" > file : Write to file
-
-4. System Information
-   - help              : Show all commands
-   - man <command>     : Detailed command help
-   - cat /command/ls   : View ls implementation
-
-5. AI Integration
-   - chat              : Enter AI chat mode
-   - ai: <question>    : Quick AI query
-
-Try These Commands:
-===================
-  cat /README
-  tree
-  cat /command/ls
-  edit /configuration/system-prompt.txt
-  
-Type 'help' for complete command list.`,
+What drives me is the excitement of uncovering hidden patterns in data and building systems that learn and adapt. Whether it's predicting outcomes, automating decisions, or visualizing insights, I approach each challenge with curiosity and a commitment to creating solutions that matter.`,
                             metadata: { size: 512, created: Date.now(), modified: Date.now() }
                         }
                     }
@@ -564,7 +532,44 @@ EXAMPLES
     alias ll='ls -la'       Create ll alias
 
 SEE ALSO
-    unalias (not implemented)`
+    unalias (not implemented)`,
+
+            'ping': `Command: ping - Send ICMP ECHO_REQUEST to network hosts
+
+SYNOPSIS
+    ping [HOST]
+
+DESCRIPTION
+    Send ICMP ECHO_REQUEST to network hosts.
+    Note: This is a simulation in the browser.
+
+IMPLEMENTATION
+    1. Simulate sending packets
+    2. Wait for simulated response
+    3. Print stats
+
+EXAMPLES
+    ping google.com         Ping google.com
+    ping localhost          Ping localhost`,
+
+            'curl': `Command: curl - Transfer a URL
+
+SYNOPSIS
+    curl [options] [URL]
+
+DESCRIPTION
+    Transfer data from a server.
+    Supports HTTP/HTTPS protocols.
+    Note: Subject to browser CORS policies.
+
+OPTIONS
+    -I      Fetch the HTTP-header only
+    -o      Write output to <file> instead of stdout
+
+EXAMPLES
+    curl https://api.example.com/data
+    curl -I https://google.com
+    curl https://example.com/data.json -o data.json`
         };
 
         // Create file nodes for each command
@@ -1040,7 +1045,7 @@ export class CommandParser {
             'cat', 'echo', 'head', 'tail', 'wc', 'grep', 'edit', 'nano', 'vim',
             'date', 'whoami', 'uname', 'df', 'clear', 'help', 'man', 'history',
             'download', 'alias', 'set', 'exit', 'chat', '/config', '/chat',
-            'whatis', 'which', 'ai'
+            'whatis', 'which', 'ai', 'ping', 'curl'
         ];
 
         // Load aliases from configuration file
@@ -1325,6 +1330,8 @@ export class CommandParser {
                     output = content;
                 }
                 break;
+            case 'ping': output = await this._ping(params[0]); break;
+            case 'curl': output = await this._curl(params, flags); break;
             case 'edit':
             case 'nano':
             case 'vim':
@@ -1443,11 +1450,148 @@ export class CommandParser {
         return 'AI not available';
     }
 
+    async _ping(host) {
+        if (!host) return 'Usage: ping [host]';
+
+        let url = host;
+        if (!url.startsWith('http')) {
+            url = 'https://' + url;
+        }
+
+        this.ui.print(`PING ${host} (${url}): HTTP probe`, 'system');
+
+        const times = [];
+        let received = 0;
+
+        for (let i = 0; i < 4; i++) {
+            const start = performance.now();
+            try {
+                // We use mode: 'no-cors' because we just want to know if it's reachable,
+                // we don't care about the content (and most sites block CORS)
+                await fetch(url, { mode: 'no-cors', method: 'HEAD', cache: 'no-cache' });
+                const end = performance.now();
+                const time = end - start;
+                times.push(time);
+                received++;
+                this.ui.print(`Connected to ${host}: seq=${i} time=${time.toFixed(1)} ms`, 'system');
+            } catch (e) {
+                this.ui.print(`Request timeout for icmp_seq ${i}`, 'error');
+            }
+            // Small delay between pings
+            if (i < 3) await new Promise(r => setTimeout(r, 1000));
+        }
+
+        this.ui.print(`--- ${host} ping statistics ---`, 'system');
+
+        if (times.length > 0) {
+            const min = Math.min(...times);
+            const max = Math.max(...times);
+            const avg = times.reduce((a, b) => a + b, 0) / times.length;
+            const stddev = Math.sqrt(times.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b) / times.length);
+
+            this.ui.print(`${4} packets transmitted, ${received} packets received, ${((4 - received) / 4 * 100).toFixed(1)}% packet loss`, 'system');
+            this.ui.print(`round-trip min/avg/max/stddev = ${min.toFixed(3)}/${avg.toFixed(3)}/${max.toFixed(3)}/${stddev.toFixed(3)} ms`, 'system');
+        } else {
+            this.ui.print(`${4} packets transmitted, ${received} packets received, 100% packet loss`, 'system');
+        }
+
+        return '';
+    }
+
+    async _curl(params, flags) {
+        if (params.length === 0) return 'curl: try \'curl --help\' or \'curl --manual\' for more information';
+
+        let url = params[0];
+        // Handle case where -o is first arg
+        if (params[0] === '-o' && params.length > 2) {
+            url = params[2];
+        } else if (flags.o && params.length > 1) {
+            // If -o flag is parsed but we need to find the filename and url
+            // The parser puts non-flag args in params.
+            // If command was: curl url -o file
+            // params = [url, file]
+            // If command was: curl -o file url
+            // params = [file, url]
+            // This simple parser might be tricky. Let's assume standard position or look for args.
+            // Let's rely on the params array.
+            // We need to identify which param is the URL and which is the output file.
+            // Usually -o takes the NEXT argument.
+            // But our parser separates flags and params.
+            // Let's simplify: if -o is present, we expect 2 params: URL and Filename.
+            // We'll try to guess which is which. URL usually has http/https or dots.
+        }
+
+        // Better argument parsing for curl specifically
+        // We need to handle: curl <url> -o <file> OR curl -o <file> <url>
+        // Since our parser extracts flags separately, we might lose the position of -o.
+        // But wait, the parser in _execute receives `cleanParams` which are non-flag arguments.
+        // If the user typed `curl url -o file`, `cleanParams` is `[url, file]`.
+        // If `curl -o file url`, `cleanParams` is `[file, url]`.
+        // This is ambiguous without knowing where -o was.
+        // However, usually the URL is the one with http/https.
+
+        let outputFile = null;
+        if (flags.o) {
+            if (params.length < 2) return 'curl: no output file specified';
+            // Heuristic: find the one that looks like a URL
+            const urlIndex = params.findIndex(p => p.startsWith('http') || p.includes('www.'));
+            if (urlIndex !== -1) {
+                url = params[urlIndex];
+                outputFile = params[urlIndex === 0 ? 1 : 0];
+            } else {
+                // Default: first is URL, second is file
+                url = params[0];
+                outputFile = params[1];
+            }
+        } else {
+            url = params[0];
+        }
+
+        if (!url) return 'curl: no URL specified';
+        if (!url.startsWith('http')) url = 'https://' + url;
+
+        this.ui.print(`curl: try connecting to ${url}...`, 'system');
+
+        try {
+            const method = flags.I ? 'HEAD' : 'GET';
+            const response = await fetch(url, { method: method });
+
+            if (flags.I) {
+                // Print headers
+                let headers = `HTTP/1.1 ${response.status} ${response.statusText}\n`;
+                response.headers.forEach((val, key) => {
+                    headers += `${key}: ${val}\n`;
+                });
+                return headers;
+            }
+
+            const text = await response.text();
+
+            if (outputFile) {
+                const res = this.fs.write(outputFile, text);
+                if (res) return res;
+                return ''; // Silent on success? Or stats?
+                // curl usually shows a progress meter. We'll just say saved.
+                // Actually curl -o is silent if no -v.
+                // But for UX let's print something.
+                // return `Saved ${text.length} bytes to ${outputFile}`;
+                // Real curl is silent. Let's be silent but maybe update UI?
+                // Let's return nothing to mimic standard behavior, or maybe a small confirmation since we don't have a progress bar.
+                return '';
+            }
+
+            return text;
+
+        } catch (error) {
+            return `curl: (7) Failed to connect to ${url}. \nPossible reasons:\n- CORS policy blocked the request (Browser limitation)\n- Network error\n- Invalid URL`;
+        }
+    }
+
     _getHelp() {
         const categories = {
             'File System': ['ls', 'cd', 'pwd', 'mkdir', 'rmdir', 'touch', 'rm', 'cp', 'mv', 'tree'],
             'Content': ['cat', 'echo', 'head', 'tail', 'wc', 'grep', 'edit', 'vim'],
-            'System': ['date', 'whoami', 'uname', 'clear', 'download', 'history', 'exit'],
+            'System': ['date', 'whoami', 'uname', 'clear', 'download', 'history', 'exit', 'ping', 'curl'],
             'Info & Config': ['whatis', 'which', 'man', 'help', 'alias', 'set', '/config'],
             'AI Chat': ['chat', '/chat', 'ai: [query]']
         };
@@ -1600,6 +1744,21 @@ export class CommandParser {
                 desc: 'Print effective userid',
                 usage: 'whoami'
             },
+            'ping': {
+                desc: 'Send ICMP ECHO_REQUEST to network hosts',
+                usage: 'ping [host]',
+                example: 'ping google.com'
+            },
+            'curl': {
+                desc: 'Transfer a URL',
+                usage: 'curl [options] [URL]',
+                flags: [
+                    ['-I', 'Fetch the HTTP-header only'],
+                    ['-o', 'Write output to file']
+                ],
+                example: 'curl https://api.example.com/data'
+            },
+
             'uname': {
                 desc: 'Print system information',
                 usage: 'uname [-a]',
