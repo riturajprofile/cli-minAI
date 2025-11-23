@@ -1026,9 +1026,10 @@ SEE ALSO
 }
 
 export class CommandParser {
-    constructor(fs, uiHandler) {
+    constructor(fs, uiHandler, aiHandler) {
         this.fs = fs;
         this.ui = uiHandler;
+        this.aiHandler = aiHandler;
         this.mode = 'command'; // 'command' | 'chat'
         this.config = {
             mode: 'smart', // 'strict', 'helpful', 'smart'
@@ -1039,7 +1040,7 @@ export class CommandParser {
             'cat', 'echo', 'head', 'tail', 'wc', 'grep', 'edit', 'nano', 'vim',
             'date', 'whoami', 'uname', 'df', 'clear', 'help', 'man', 'history',
             'download', 'alias', 'set', 'exit', 'chat', '/config', '/chat',
-            'whatis', 'which'
+            'whatis', 'which', 'ai'
         ];
 
         // Load aliases from configuration file
@@ -1050,8 +1051,8 @@ export class CommandParser {
         const defaultAliases = {
             'h': 'help',
             '?': 'help',
-            'ai': 'chat',
             'ask': 'chat',
+            'ai:': 'ai',
             '/help': 'help',
             '/clear': 'clear',
             '/h': 'help'
@@ -1128,8 +1129,8 @@ export class CommandParser {
         if (!cmd) return;
 
         // 3. Check for explicit AI prefix (only if followed by space or @)
-        if (input.match(/^ai:\s/) || input.startsWith('@') || input.match(/^ask:\s/)) {
-            return { type: 'chat', content: input.replace(/^(ai:\s*|ask:\s*|@)/, '') };
+        if (input.startsWith('@') || input.match(/^ask:\s/)) {
+            return { type: 'chat', content: input.replace(/^(ask:\s*|@)/, '') };
         }
 
         // 4. Check Whitelist & Aliases
@@ -1337,6 +1338,9 @@ export class CommandParser {
                 this.ui.print('Switched to Chat Mode. Type "exit" to return.', 'system');
                 this.ui.setPrompt('[AI Chat Mode] >');
                 return;
+            case 'ai':
+                output = await this._chat(params.join(' '));
+                break;
             case 'alias':
                 if (params.length === 0) {
                     // List all aliases
@@ -1425,63 +1429,62 @@ export class CommandParser {
         return lines.filter(l => regex.test(l)).join('\n');
     }
 
+    async _chat(params) {
+        if (!params) {
+            this.mode = 'chat';
+            this.ui.print('Entered AI Chat Mode. Type "exit" to return to command mode.', 'system');
+            this.ui.setPrompt('ai> ');
+            return '';
+        }
+
+        if (this.aiHandler) {
+            return await this.aiHandler(params);
+        }
+        return 'AI not available';
+    }
+
     _getHelp() {
-        return `
-        <div style="color: #a8a8a8; margin-bottom: 10px;">MinAI Terminal v3.0 Help</div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;">
-            <div style="color: #4CAF50; font-weight: bold;">File System</div>
-            <div>ls</div>
-            <div>cd</div>
-            <div>pwd</div>
-            <div>mkdir</div>
-            <div>rmdir</div>
-            <div>touch</div>
-            <div>rm</div>
-            <div>cp</div>
-            <div>mv</div>
-            <div>tree</div>
-            
-            <div style="color: #2196F3; font-weight: bold;">Content</div>
-            <div>cat</div>
-            <div>echo</div>
-            <div>head</div>
-            <div>tail</div>
-            <div>wc</div>
-            <div>grep</div>
-            <div>edit</div>
-            <div>nano</div>
-            <div>vim</div>
+        const categories = {
+            'File System': ['ls', 'cd', 'pwd', 'mkdir', 'rmdir', 'touch', 'rm', 'cp', 'mv', 'tree'],
+            'Content': ['cat', 'echo', 'head', 'tail', 'wc', 'grep', 'edit', 'vim'],
+            'System': ['date', 'whoami', 'uname', 'clear', 'download', 'history', 'exit'],
+            'Info & Config': ['whatis', 'which', 'man', 'help', 'alias', 'set', '/config'],
+            'AI Chat': ['chat', '/chat', 'ai: [query]']
+        };
 
-            <div style="color: #FFC107; font-weight: bold;">System</div>
-            <div>date</div>
-            <div>whoami</div>
-            <div>uname</div>
-            <div>df</div>
-            <div>clear</div>
-            <div>download</div>
-            <div>history</div>
-            <div>exit</div>
+        let html = '<div style="color: #a8a8a8; margin-bottom: 10px;">MinAI Terminal v3.0 Help</div>';
 
-            <div style="color: #9C27B0; font-weight: bold;">Info & Config</div>
-            <div>whatis</div>
-            <div>which</div>
-            <div>man</div>
-            <div>help</div>
-            <div>alias</div>
-            <div>set</div>
-            <div>/config</div>
+        html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
+        html += '<thead><tr style="border-bottom: 1px solid #444; text-align: left;">';
+        html += '<th style="padding: 8px; color: #fff;">Category</th>';
+        html += '<th style="padding: 8px; color: #fff;">Available Commands</th>';
+        html += '</tr></thead><tbody>';
 
-            <div style="color: #E91E63; font-weight: bold;">AI Chat</div>
-            <div>chat</div>
-            <div>/chat</div>
-            <div>ai: [query]</div>
-        </div>
-        <div style="margin-top: 15px; color: #888;">
+        const colors = {
+            'File System': '#4CAF50',
+            'Content': '#2196F3',
+            'System': '#FFC107',
+            'Info & Config': '#9C27B0',
+            'AI Chat': '#E91E63'
+        };
+
+        for (const [category, commands] of Object.entries(categories)) {
+            html += '<tr>';
+            html += `<td style="padding: 8px; color: ${colors[category] || '#fff'}; font-weight: bold; vertical-align: top; width: 150px;">${category}</td>`;
+            html += `<td style="padding: 8px; color: #ccc;">${commands.join(', ')}</td>`;
+            html += '</tr>';
+        }
+
+        html += '</tbody></table>';
+
+        html += `<div style="margin-top: 15px; color: #888;">
             Usage: <span style="color: #fff;">command [arguments] [flags]</span><br>
             Try <span style="color: #fff;">man [command]</span> for detailed documentation.<br>
             View implementations: <span style="color: #fff;">cat /command/[command]</span><br>
             Edit config: <span style="color: #fff;">edit /configuration/system-prompt.txt</span>
         </div>`;
+
+        return html;
     }
 
     _getMan(cmd) {

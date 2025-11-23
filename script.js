@@ -100,7 +100,37 @@ const uiHandler = {
     }
 };
 
-const parser = new CommandParser(fs, uiHandler);
+// AI Handler for CommandParser (returns string for redirection)
+const aiHandler = async (prompt) => {
+    if (!state.apiKey) {
+        return 'Error: API Key missing. Type /config to set it.';
+    }
+
+    try {
+        // Load system prompt from configuration
+        let systemPromptContent = 'You are MinAI, a helpful assistant.';
+        try {
+            systemPromptContent = fs.cat('/configuration/system-prompt.txt');
+            if (systemPromptContent.startsWith('Error')) {
+                systemPromptContent = 'You are MinAI, a helpful assistant.';
+            }
+        } catch (e) { }
+
+        const systemPrompt = { role: 'system', content: systemPromptContent };
+        const messages = [systemPrompt, { role: 'user', content: prompt }];
+
+        const baseUrl = state.baseUrl || 'https://aipipe.org/openrouter/v1/chat/completions';
+        const client = new AIClient(state.apiKey, baseUrl);
+
+        const response = await client.sendMessage(messages);
+        return response.content;
+
+    } catch (error) {
+        return `Error: ${error.message}`;
+    }
+};
+
+const parser = new CommandParser(fs, uiHandler, aiHandler);
 
 function scrollToBottom() {
     elements.output.scrollTop = elements.output.scrollHeight;
@@ -188,36 +218,14 @@ async function handleInput(e) {
 
 
 async function handleChat(content) {
-    if (!state.apiKey) {
-        uiHandler.print('Error: API Key missing. Type /config to set it.', 'error');
-        return;
-    }
-
     state.isLoading = true;
-    try {
-        // Load system prompt from configuration
-        let systemPromptContent = 'You are MinAI, a helpful assistant.';
-        try {
-            systemPromptContent = fs.cat('/configuration/system-prompt.txt');
-            if (systemPromptContent.startsWith('Error')) {
-                systemPromptContent = 'You are MinAI, a helpful assistant.';
-            }
-        } catch (e) { }
+    const response = await aiHandler(content);
+    state.isLoading = false;
 
-        const systemPrompt = { role: 'system', content: systemPromptContent };
-        const messages = [systemPrompt, { role: 'user', content: content }];
-
-        const baseUrl = state.baseUrl || 'https://aipipe.org/openrouter/v1/chat/completions';
-        const client = new AIClient(state.apiKey, baseUrl);
-
-        const response = await client.sendMessage(messages);
-
-        uiHandler.print(response.content, 'ai');
-
-    } catch (error) {
-        uiHandler.print(`Error: ${error.message}`, 'error');
-    } finally {
-        state.isLoading = false;
+    if (response.startsWith('Error:')) {
+        uiHandler.print(response, 'error');
+    } else {
+        uiHandler.print(response, 'ai');
     }
 }
 
@@ -235,6 +243,7 @@ function openSettings() {
     }
 
     elements.settingsModal.style.display = 'flex';
+    elements.apiKeyInput.focus();
 }
 
 function closeSettings() {
@@ -267,7 +276,20 @@ elements.providerSelect.addEventListener('change', () => {
 
 // Initial Focus & Prompt
 elements.input.focus();
-document.addEventListener('click', () => elements.input.focus());
+document.addEventListener('click', (e) => {
+    // Don't steal focus if clicking inside an input, textarea, select, or modal
+    if (e.target.tagName === 'INPUT' ||
+        e.target.tagName === 'TEXTAREA' ||
+        e.target.tagName === 'SELECT' ||
+        e.target.closest('.modal')) {
+        return;
+    }
+    // Also don't steal if text is being selected
+    if (window.getSelection().toString().length > 0) {
+        return;
+    }
+    elements.input.focus();
+});
 updatePrompt();
 
 // Welcome Message
