@@ -33,6 +33,11 @@ export function registerSystemCommands(fs, ui) {
         return 'Type "exit" is not needed. Just close the terminal.';
     }, 'Exit terminal', 'exit', 'System');
 
+    registry.register('config', () => {
+        ui.openSettings();
+        return 'Opening configuration...';
+    }, 'Open configuration settings', 'config', 'System');
+
     registry.register('alias', (args) => {
         if (args.length === 0) {
             // List all aliases

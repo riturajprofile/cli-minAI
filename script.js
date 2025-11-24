@@ -146,7 +146,7 @@ async function handleInput(e) {
 
         // 3. Handle based on mode
         if (state.currentMode === 'agent') {
-            if (input.toLowerCase() === 'exit') {
+            if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'sh') {
                 // Switch back to shell
                 document.querySelector('[data-mode="sh"]').click();
                 uiHandler.print('Switched to shell mode', 'system');
@@ -154,13 +154,19 @@ async function handleInput(e) {
                 return;
             }
 
-            // Direct command bypass
-            const validCommands = ['ls', 'cd', 'pwd', 'mkdir', 'rm', 'cat', 'help', 'clear', 'theme'];
+            // Direct command bypass - handle commands and slash commands
+            const validCommands = ['ls', 'cd', 'pwd', 'mkdir', 'rm', 'cat', 'help', 'clear', 'theme',
+                'config', 'man', 'alias', 'set', 'history', 'bgset'];
             const firstWord = input.trim().split(/\s+/)[0];
-            if (validCommands.includes(firstWord)) {
-                uiHandler.print(`$ ${input}`, 'user');
+            // Remove leading slash if present
+            const commandWord = firstWord.startsWith('/') ? firstWord.slice(1) : firstWord;
+
+            if (validCommands.includes(commandWord) || firstWord.startsWith('/')) {
+                // Handle slash commands by removing the slash
+                const cleanInput = input.startsWith('/') ? input.slice(1) : input;
+                uiHandler.print(`$ ${cleanInput}`, 'user');
                 elements.input.value = '';
-                const result = await parser.parse(input);
+                const result = await parser.parse(cleanInput);
                 if (result) uiHandler.print(result);
                 updatePrompt();
                 return;
@@ -173,17 +179,20 @@ async function handleInput(e) {
 
         } else {
             // Shell Mode
-            // Shell Mode
             const user = 'user@minai';
             const path = state.path.join('/');
             const dir = path === 'home' ? '~' : (path.startsWith('home/') ? '~/' + path.slice(5) : path);
+
+            // Remove leading slash if present (e.g., /config -> config)
+            const cleanInput = input.startsWith('/') ? input.slice(1) : input;
+
             uiHandler.print(`${user}:${dir}$ ${input}`, 'user');
             elements.input.value = '';
 
-            const result = await parser.parse(input);
+            const result = await parser.parse(cleanInput);
             if (result) uiHandler.print(result);
 
-            if (input.trim().startsWith('cd ')) {
+            if (cleanInput.trim().startsWith('cd ')) {
                 trackDirectory(fs.pwd());
             }
             updatePrompt();
@@ -314,7 +323,23 @@ async function handleAgentRequest(userRequest) {
     uiHandler.print(`\n✨ Agent thinking...`, 'system');
 
     if (!state.apiKey) {
-        uiHandler.print('❌ API Key not set. Use /config.', 'error');
+        uiHandler.print('❌ API Key not set.', 'error');
+        uiHandler.print('Do you want to activate /config? Type "yes" to configure:', 'system');
+
+        // Wait for user input
+        const confirmed = await new Promise((resolve) => {
+            state.waitingForConfirmation = true;
+            state.confirmationResolver = resolve;
+        });
+
+        if (confirmed) {
+            // Open config modal
+            openSettings();
+            uiHandler.print('Configuration modal opened. Please set your API key.', 'system');
+        } else {
+            uiHandler.print('Configuration cancelled. You can type "/config" anytime.', 'system');
+        }
+
         state.isLoading = false;
         return;
     }
@@ -433,7 +458,7 @@ document.addEventListener('click', (e) => {
 initializeModeSwitcher();
 updatePrompt();
 
-uiHandler.print(`Hi, I'm Ritu Raj.\nType 'help' for commands, or click 'Agent' (✨) for AI assistance.`, 'system');
+uiHandler.print(`Hi, I'm Ritu Raj.\ncontact: riturajprofile@gmail.com or www.riturajprofile.com\nType 'help' for commands, or click 'Agent' (✨) for AI assistance.`, 'system');
 
 const savedTheme = localStorage.getItem('minai_theme');
 if (savedTheme) uiHandler.setTheme(savedTheme);
