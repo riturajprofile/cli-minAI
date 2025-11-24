@@ -353,23 +353,47 @@ async function handleAgentRequest(userRequest) {
             apiUrl = apiUrl.replace(/\/$/, '') + '/chat/completions';
         }
 
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${state.apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-4',
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userRequest }
-                ],
-                temperature: 0.7
-            })
-        });
+        // Exponential backoff retry logic for rate limiting
+        let retryCount = 0;
+        const maxRetries = 3;
+        let response;
 
-        if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+        while (retryCount <= maxRetries) {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${state.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userRequest }
+                    ],
+                    temperature: 0.7
+                })
+            });
+
+            // Handle successful response
+            if (response.ok) break;
+
+            // Handle rate limiting (429)
+            if (response.status === 429) {
+                if (retryCount < maxRetries) {
+                    const waitTime = Math.pow(2, retryCount) * 1000; // Exponential: 1s, 2s, 4s
+                    uiHandler.print(`⚠️  Rate limit reached. Retrying in ${waitTime / 1000}s... (attempt ${retryCount + 1}/${maxRetries})`, 'system');
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    retryCount++;
+                    continue;
+                } else {
+                    throw new Error('Rate limit exceeded. Please wait a moment and try again. The API has rate limits to prevent too many requests in a short time.');
+                }
+            }
+
+            // Handle other errors
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
 
         const data = await response.json();
         const agentResponse = data.choices[0].message.content.trim();
