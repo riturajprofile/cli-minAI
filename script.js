@@ -465,29 +465,22 @@ if (!hasVisited) {
     uiHandler.print(`╔════════════════════════════════════════════════════════════════╗
 ║          Welcome to MinAI Terminal - AI-Powered CLI           ║
 ╚════════════════════════════════════════════════════════════════╝
-
 🚀 What is MinAI Terminal?
    A browser-based Linux-like terminal with AI intelligence built in!
    Experience the power of command-line interface with AI assistance.
-
 💡 Quick Start (3 easy steps):
    1. Type 'help' to see all 40+ available commands
    2. Try 'cat welcome.txt' for a detailed guide
    3. Click 'Agent (✨)' for AI-powered command execution
-
 🎯 Two Powerful Modes:
    • Shell Mode (❯)  - Traditional command-line interface
    • Agent Mode (✨) - AI assistant that executes commands for you
-
 ⚡ Try These Now:
    ls              - List files
    tree            - View directory structure
    theme list      - See available themes
-   neofetch        - System info display
-
 🔑 Optional: Configure AI (for Agent mode)
    Type '/config' to set your OpenAI API key
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Created by Ritu Raj | riturajprofile@gmail.com
 🌐 www.riturajprofile.com | 💻 github.com/riturajprofile
