@@ -465,6 +465,12 @@ if (!hasVisited) {
     uiHandler.print(`╔════════════════════════════════════════════════════════════════╗
 ║          Welcome to MinAI Terminal - AI-Powered CLI           ║
 ╚════════════════════════════════════════════════════════════════╝
+
+✨ PROJECT MOTTO:
+   This is a fun project built using vibe coding - not a production use case,
+   but this type of functionality can be implemented in DevOps tools, CI/CD
+   pipelines, cloud management platforms, and educational environments!
+
 🚀 What is MinAI Terminal?
    A browser-based Linux-like terminal with AI intelligence built in!
    Experience the power of command-line interface with AI assistance.
