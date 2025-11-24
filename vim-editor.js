@@ -67,7 +67,7 @@ export class VimEditor {
 
         this.textArea = document.createElement('pre');
         this.textArea.className = 'vim-content';
-        this.textArea.style.cssText = 'margin: 0; padding: 10px; font-family: monospace; font-size: 14px; color: #e0e0e0; background: transparent; outline: none; white-space: pre; tab-size: 4; min-height: 100%;';
+        this.textArea.style.cssText = 'margin: 0; padding: 10px; font-family: monospace; font-size: 14px; color: #e0e0e0; background: transparent; outline: none; white-space: pre-wrap; tab-size: 4; min-height: 100%;';
         this.textArea.spellcheck = false;
         this.textArea.tabIndex = 0; // Make focusable
         contentWrapper.appendChild(this.textArea);

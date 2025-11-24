@@ -1,5 +1,6 @@
 import { AIClient } from './ai.js';
-import { FileSystem, CommandParser } from './terminal.js';
+import { FileSystem } from './modules/filesystem.js';
+import { CommandParser } from './modules/parser.js';
 import { state, trackDirectory, getDirectorySuggestions } from './modules/state.js';
 
 import { elements, uiHandler, openSettings, closeSettings, saveSettings } from './modules/ui.js';
