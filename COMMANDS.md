@@ -1,255 +1,224 @@
 # Command Development Guide
 
-Complete guide for adding new commands to MinAI Terminal.
+Complete guide for adding new commands to MinAI Terminal with the new modular architecture.
 
-## 📋 Command Checklist
+## 📋 Quick Start
 
-When adding a new command, complete all these steps:
+Adding a command is now simpler with the command registry pattern!
 
-- [ ] Add to `validCommands` array
-- [ ] Add switch case in `_execute()`
-- [ ] Implement command method (`_yourcommand`)
-- [ ] Add to help categories
-- [ ] Add manual entry
-- [ ] Update agent knowledge (if applicable)
-- [ ] Test the command
-- [ ] Document in this file
+### Example: Adding a New Command
 
-## 🎯 Step-by-Step Guide
+**1. Choose the appropriate module** in `modules/commands/`:
+- `file-system.js` - File/directory operations
+- `content.js` - File content manipulation
+- `system.js` - System commands
+- `network.js` - Network operations
+- `utils.js` - Utilities (calc, theme, etc.)
+- `help.js` - Documentation commands
 
-### Step 1: Add to Valid Commands List
-
-**Location:** `terminal.js` ~line 1111
+**2. Register your command:**
 
 ```javascript
-this.validCommands = [
-    'ls', 'cd', 'pwd', // ... existing commands
-    'yourcommand'  // Add here (alphabetically preferred)
-];
-```
+// In modules/commands/utils.js (or appropriate file)
+import { registry } from './registry.js';
 
-### Step 2: Add Switch Case
-
-**Location:** `terminal.js` in `_execute()` method ~line 1440
-
-```javascript
-switch (cmd) {
-    // ... existing cases
-    case 'yourcommand':
-        output = this._yourcommand(params, flags);
-        break;
-```
-
-**Patterns:**
-
-```javascript
-// Simple command with no params
-case 'simple':
-    output = this._simple();
-    break;
-
-// Command with params
-case 'withparams':
-    output = this._withparams(params, flags);
-    break;
-
-// Command that needs direct return
-case 'special':
-    this.ui.doSomething();
-    return; // No output to print
-```
-
-### Step 3: Implement Command Method
-
-**Location:** `terminal.js` after existing command methods ~line 1800+
-
-```javascript
-_yourcommand(params, flags) {
-    // 1. Validate input
-    if (params.length === 0) {
-        return 'Usage: yourcommand <arg> [-f]';
-    }
+export function registerUtilsCommands(fs, ui) {
+    // ... existing commands
     
-    // 2. Check flags
-    if (flags.h) {
-        return this._getMan('yourcommand');
-    }
-    
-    // 3. Your logic here
-    const arg = params[0];
-    const result = // ... do something with arg
-    
-    // 4. Return output (string or HTML)
-    return `Result: ${result}`;
+    registry.register('mycommand', (args, flags) => {
+        if (args.length === 0) return 'Usage: mycommand <arg>';
+        
+        // Your logic here
+        return `Result: ${args[0]}`;
+    }, 'Brief description', 'mycommand <arg>', 'Tools');
 }
 ```
 
-**Common Patterns:**
+**That's it!** The command is automatically:
+- ✅ Available for execution
+- ✅ Added to help system
+- ✅ Included in `man` pages
+- ✅ Supports aliases
 
-```javascript
-// File operation
-_readfile(params) {
-    const filepath = params[0];
-    const content = this.fs.cat(filepath);
-    if (content.startsWith('Error')) return content;
-    return content;
-}
+## 🎯 Command Registry API
 
-// Network operation (async)
-async _fetch(url) {
-    try {
-        const response = await fetch(url);
-        const data = await response.text();
-        return data;
-    } catch (error) {
-        return `Error: ${error.message}`;
-    }
-}
+### `registry.register(name, handler, description, usage, category)`
 
-// HTML output with styling
-_formatted(data) {
-    return `<div style="color: #8be9fd;">
-        <span style="color: #ff79c6;">Label:</span> ${data}
-    </div>`;
-}
-```
-
-### Step 4: Add to Help Categories
-
-**Location:** `terminal.js` in `_getHelp()` ~line 1892
-
-```javascript
-const categories = {
-    'File System': ['ls', 'cd', 'pwd', ...],
-    'Content': ['cat', 'echo', ...],
-    'Tools': ['calc', 'json', 'yourcommand'],  // Add here
-    // ...
-};
-```
+**Parameters:**
+- `name` (string): Command name
+- `handler` (function): `(args, flags) => string` - Returns output
+- `description` (string): One-line description
+- `usage` (string): Usage example
+- `category` (string): Category for help grouping
 
 **Categories:**
-- **File System** - File/directory operations
-- **Content** - Reading/writing file content
-- **Network** - HTTP, ping, curl
-- **Utilities** - Tools like calc, json, theme
-- **System** - System info, date, clear
-- **Help** - Documentation commands
-- **AI** - AI agent related
+- `'File System'` - File/directory operations
+- `'Content'` - Content manipulation
+- `'System'` - System commands
+- `'Network'` - Network operations
+- `'Tools'` - Utilities
+- `'Info & Config'` - Documentation
+- `'AI'` - AI-related
 
-### Step 5: Add Manual Entry
-
-**Location:** `terminal.js` in `_getMan()` ~line 2010+
+### Handler Function
 
 ```javascript
-const manuals = {
-    // ... existing entries
-    'yourcommand': {
-        desc: 'Brief one-line description',
-        usage: 'yourcommand <arg> [-options]',
-        flags: [
-            ['-f', 'Flag description'],
-            ['-v', 'Verbose output']
-        ],
-        example: 'yourcommand test -f'
-    }
-};
-```
-
-### Step 6: Update Agent Knowledge (Optional)
-
-If the agent should know about your command:
-
-**Location:** `script.js` ~line 508+ in agent system prompt
-
-```javascript
-UTILITIES:
-• calc <expression> - calculator
-• json <file> - format JSON
-• yourcommand <arg> - your description  // Add here
-```
-
-Also add an example:
-
-**Location:** `script.js` ~line 680+
-
-```javascript
-User: "use yourcommand with test"
-{
-  "plan": "Execute yourcommand",
-  "commands": ["yourcommand test"],
-  "needsPermission": false
-}
-```
-
-## 📦 Complete Example: Adding `reverse` Command
-
-Reverses a string.
-
-### Implementation
-
-```javascript
-// Step 1: Add to validCommands (line 1111)
-this.validCommands = [
-    // ...
-    'reverse'
-];
-
-// Step 2: Add switch case (line 1440+)
-case 'reverse':
-    output = this._reverse(params);
-    break;
-
-// Step 3: Implement method (line 1800+)
-_reverse(params) {
-    if (params.length === 0) {
-        return 'Usage: reverse <text>';
-    }
+function handler(args, flags) {
+    // args: Array of arguments (strings)
+    // flags: Object with flag names as keys
+    //        e.g., -la becomes { l: true, a: true }
     
-    const text = params.join(' ');
-    const reversed = text.split('').reverse().join('');
-    
-    return `<div style="color: #50fa7b;">
-        Original: ${text}<br>
-        Reversed: ${reversed}
-    </div>`;
+    // Return: String or HTML output
+    return 'Output to display';
 }
-
-// Step 4: Add to help (line 1892)
-const categories = {
-    'Tools': ['calc', 'json', 'reverse'],
-    // ...
-};
-
-// Step 5: Add manual (line 2010+)
-'reverse': {
-    desc: 'Reverse a string',
-    usage: 'reverse <text>',
-    example: 'reverse hello world'
-}
-
-// Step 6: Update agent (script.js line 508+)
-UTILITIES:
-• reverse <text> - reverse a string
 ```
 
-### Test
+## 📦 Complete Examples
 
-```bash
-$ reverse hello
-Original: hello
-Reversed: olleh
-
-$ reverse hello world
-Original: hello world  
-Reversed: dlrow olleh
-```
-
-## 🎨 Output Styling
-
-Use these colors for consistency:
+### Simple Command
 
 ```javascript
-// Cyberpunk theme colors
+registry.register('hello', () => {
+    return 'Hello, World!';
+}, 'Say hello', 'hello', 'Tools');
+```
+
+### With Arguments
+
+```javascript
+registry.register('greet', (args) => {
+    if (args.length === 0) return 'Usage: greet <name>';
+    return `Hello, ${args[0]}!`;
+}, 'Greet someone', 'greet <name>', 'Tools');
+```
+
+### With Flags
+
+```javascript
+registry.register('list', (args, flags) => {
+    const path = args[0] || '.';
+    const long = flags.l;
+    const all = flags.a;
+    
+    // Use fs to list directory
+    return fs.ls(path, { l: long, a: all });
+}, 'List directory', 'list [-la] [path]', 'File System');
+```
+
+### File Operation
+
+```javascript
+registry.register('count', (args) => {
+    if (args.length === 0) return 'Usage: count <file>';
+    
+    const content = fs.cat(args[0]);
+    if (content.startsWith('Error')) return content;
+    
+    const lines = content.split('\n').length;
+    const words = content.split(/\s+/).length;
+    
+    return `Lines: ${lines}, Words: ${words}`;
+}, 'Count lines and words', 'count <file>', 'Content');
+```
+
+### Network Command (Async)
+
+```javascript
+registry.register('fetch', async (args) => {
+    if (args.length === 0) return 'Usage: fetch <url>';
+    
+    try {
+        const response = await fetch(args[0]);
+        const text = await response.text();
+        return text;
+    } catch (e) {
+        return `Error: ${e.message}`;
+    }
+}, 'Fetch URL content', 'fetch <url>', 'Network');
+```
+
+### HTML Output
+
+```javascript
+registry.register('colored', (args) => {
+    const text = args.join(' ');
+    return `
+        <div style="color: #8be9fd;">
+            <span style="color: #ff79c6;">Colored:</span> ${text}
+        </div>
+    `;
+}, 'Display colored text', 'colored <text>', 'Tools');
+```
+
+## 🔧 Accessing System Components
+
+Commands receive `fs` and `ui` when registered:
+
+### FileSystem (`fs`)
+
+```javascript
+export function registerYourCommands(fs, ui) {
+    registry.register('cmd', (args) => {
+        // File operations
+        const content = fs.cat('file.txt');
+        fs.write('file.txt', 'content', false);
+        const listing = fs.ls('.', { l: true, a: true });
+        
+        // Directory operations
+        fs.cd('/home');
+        const pwd = fs.pwd();
+        fs.mkdir('newdir');
+        fs.rmdir('olddir');
+        
+        // File management
+        fs.touch('file.txt');
+        fs.rm('file.txt', { r: true });
+        fs.cp('src', 'dest');
+        fs.mv('old', 'new');
+        
+        // Tree view
+        const tree = fs.tree();
+        
+        // Reset filesystem
+        fs.reset();
+    }, ...);
+}
+```
+
+### UI Handler (`ui`)
+
+```javascript
+registry.register('cmd', (args) => {
+    // Print to terminal
+    ui.print('Text', 'system');  // types: 'system', 'error', 'user'
+    
+    // Clear screen
+    ui.clear();
+    
+    // Set theme
+    ui.setTheme('dracula');
+    
+    // Open editor
+    ui.openEditor('file.txt', content);
+    
+    // Trigger file upload
+    ui.triggerUpload((filename, content) => {
+        fs.write(filename, content);
+    });
+    
+    // Download file
+    ui.downloadFile('file.txt', content);
+    
+    // Get history
+    const history = ui.getHistory();
+}, ...);
+```
+
+## 🎨 Styling Guidelines
+
+Use terminal theme colors for consistency:
+
+```javascript
 const colors = {
     primary: '#8be9fd',    // Cyan
     secondary: '#ff79c6',   // Pink
@@ -260,159 +229,178 @@ const colors = {
     orange: '#ffb86c'       // Orange
 };
 
-// Example usage
+// Example
 return `<span style="color: ${colors.success};">Success!</span>`;
 ```
 
-## 🧪 Testing Checklist
+## 🧪 Testing Your Command
 
-- [ ] Command runs without errors
-- [ ] Help text shows correctly (`help`)
-- [ ] Manual page displays (`man yourcommand`)
-- [ ] Handles no params gracefully
-- [ ] Handles invalid params
-- [ ] Works with flags (if applicable)
-- [ ] Output is formatted nicely
-- [ ] Agent can use it (if applicable)
+1. **Reload the page** (or restart dev server)
+2. **Type** `help` to see your command listed
+3. **Run** your command: `mycommand arg`
+4. **Check** the manual: `man mycommand`
+5. **Test** error cases (no args, invalid input)
+6. **Test** with flags if applicable
 
 ## 🔍 Common Patterns
 
-### File System Access
+### Multiple Arguments
 
 ```javascript
-// Read file
-const content = this.fs.cat('file.txt');
-if (content.startsWith('Error')) return content;
-
-// Write file
-this.fs.write('file.txt', 'content', false); // false = overwrite
-
-// List directory
-const files = this.fs.ls(path, { l: true, a: true });
-
-// Check if exists
-const { node, error } = this.fs.resolve(path);
-if (error) return error;
-if (node.type !== 'file') return 'Not a file';
-```
-
-### Network Requests
-
-```javascript
-async _fetch(url) {
-    try {
-        const response = await fetch(url, {
-            mode: 'cors',  // or 'no-cors' for simple requests
-            headers: { 'Content-Type': 'application/json' }
-        });
-        return await response.text();
-    } catch (e) {
-        return `Error: ${e.message}`;
-    }
-}
-```
-
-### Processing Multiple Files (with wildcards)
-
-```javascript
-_process(params) {
-    // params already has wildcards expanded
-    // params = ['file1.txt', 'file2.txt', 'file3.txt']
+registry.register('concat', (args) => {
+    if (args.length < 2) return 'Usage: concat <file1> <file2> ...';
     
-    const results = params.map(file => {
-        const content = this.fs.cat(file);
+    const contents = args.map(f => fs.cat(f)).join('\n');
+    return contents;
+}, ...);
+```
+
+### Processing Each Argument
+
+```javascript
+registry.register('sizes', (args) => {
+    return args.map(file => {
+        const content = fs.cat(file);
         return `${file}: ${content.length} bytes`;
-    });
-    
-    return results.join('\n');
-}
+    }).join('\n');
+}, ...);
 ```
 
-### Parsing Flags
+### Conditional Logic
 
 ```javascript
-_command(params, flags) {
-    // Boolean flags
+registry.register('show', (args, flags) => {
+    if (flags.h) return 'Help text here';
     if (flags.v) console.log('Verbose mode');
-    if (flags.a) console.log('All mode');
     
-    // Combined flags work: -va = {v: true, a: true}
+    const format = flags.j ? 'json' : 'text';
+    // ... format logic
+}, ...);
+```
+
+## 📚 Advanced: Creating Command Modules
+
+To create a new command module:
+
+**1. Create file:** `modules/commands/mycategory.js`
+
+```javascript
+import { registry } from './registry.js';
+
+export function registerMyCategoryCommands(fs, ui) {
+    registry.register('cmd1', (args) => {
+        // ...
+    }, 'Description 1', 'cmd1 <arg>', 'My Category');
     
-    // Parameters are separate from flags
-    const filename = params[0]; // flags removed from params
+    registry.register('cmd2', (args) => {
+        // ...
+    }, 'Description 2', 'cmd2 <arg>', 'My Category');
 }
 ```
 
-## 📚 Reference
-
-### Accessing Other Systems
+**2. Import in `modules/parser.js`:**
 
 ```javascript
-// File system
-this.fs.cat(path)
-this.fs.write(path, content, append)
-this.fs.ls(path, flags)
-this.fs.cd(path)
-this.fs.pwd()
-this.fs.mkdir(path)
-this.fs.rm(path, flags)
+import { registerMyCategoryCommands } from './commands/mycategory.js';
 
-// UI
-this.ui.print(text, type)  // type: 'system', 'error', 'user'
-this.ui.setTheme(name)
-this.ui.toggleMatrix()
-
-// Help system
-this._getMan(commandName)
-```
-
-### File Types
-
-When working with files, be aware of extensions:
-
-```javascript
-const ext = filename.split('.').pop();
-if (ext === 'json') {
-    // Parse JSON
-    const parsed = JSON.parse(content);
-} else if (ext === 'txt' || ext === 'md') {
-    // Plain text
-}
+// In constructor:
+registerMyCategoryCommands(fs, ui);
 ```
 
 ## 🚀 Best Practices
 
-1. **Always validate input** - Check params length, types
-2. **Return meaningful errors** - Help user understand what went wrong
-3. **Use consistent styling** - Follow existing color scheme
-4. **Add examples** - In manual and help text
-5. **Handle edge cases** - Empty input, invalid paths, etc.
-6. **Keep it simple** - One command = one responsibility
-7. **Document well** - Update help, manual, and this guide
+1. ✅ **Validate input** - Check args length and types
+2. ✅ **Return meaningful errors** - Help users understand issues
+3. ✅ **Use consistent styling** - Follow color guidelines
+4. ✅ **Handle edge cases** - Empty input, missing files, etc.
+5. ✅ **Keep it focused** - One command = one responsibility
+6. ✅ **Document well** - Clear description and usage
+7. ✅ **Test thoroughly** - With and without args/flags
 
-## 💡 Tips
-
-- Look at existing commands for patterns
-- Test with and without parameters
-- Test with various flags
-- Consider wildcard support if it makes sense
-- Make error messages helpful
-- Use colors to highlight important info
-- Add your command to agent if it should be AI-accessible
-
-## 🎓 Advanced: Adding Editor Commands
-
-For commands that need modal UI (like vim):
+## 🎓 Real-World Example: JSON Formatter
 
 ```javascript
-case 'editor':
-    if (params.length === 0) return 'No file specified';
-    this.ui.openEditor(params[0], this.fs);
-    return; // No output, editor handles UI
+// In modules/commands/utils.js
+registry.register('json', (args) => {
+    if (args.length === 0) return 'Usage: json <file>';
+    
+    // Read file
+    const content = fs.cat(args[0]);
+    if (content.startsWith('Error')) return content;
+    
+    // Parse and format
+    try {
+        const parsed = JSON.parse(content);
+        const formatted = JSON.stringify(parsed, null, 2);
+        
+        // Syntax highlighting (simplified)
+        return `<pre style="color: #8be9fd;">${formatted}</pre>`;
+    } catch (e) {
+        return `Error: Invalid JSON - ${e.message}`;
+    }
+}, 'Format JSON file', 'json <file>', 'Tools');
 ```
 
-See `vim-editor.js` for the editor implementation.
+## 💡 Migration from Old System
+
+If you have commands in the old `terminal.js` file:
+
+**Before (old system):**
+```javascript
+// In terminal.js
+this.validCommands = [..., 'mycommand'];
+
+case 'mycommand':
+    output = this._mycommand(params, flags);
+    break;
+
+_mycommand(params, flags) {
+    // logic
+}
+```
+
+**After (new system):**
+```javascript
+// In modules/commands/[category].js
+registry.register('mycommand', (params, flags) => {
+    // same logic
+}, 'description', 'usage', 'Category');
+```
+
+## 📖 Reference
+
+### Registry Methods
+
+```javascript
+// Register command
+registry.register(name, handler, desc, usage, category);
+
+// Get command
+const cmd = registry.get('name');
+
+// Check if exists
+if (registry.has('name')) { ... }
+
+// Get all commands
+const all = registry.getAll();
+
+// Alias management
+registry.setAlias('ll', 'ls -la');
+const alias = registry.getAlias('ll');
+registry.removeAlias('ll');
+```
+
+### Command Object Structure
+
+```javascript
+{
+    handler: Function,      // (args, flags) => string
+    description: String,    // One-line description
+    usage: String,          // Usage example
+    category: String        // Help category
+}
+```
 
 ---
 
-**Questions?** Check existing commands in `terminal.js` for more examples!
+**Questions?** Check existing commands in `modules/commands/` for more examples!
