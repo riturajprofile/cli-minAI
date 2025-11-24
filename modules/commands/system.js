@@ -47,15 +47,16 @@ export function registerSystemCommands(fs, ui) {
         if (!match) return 'Usage: alias [name=command]';
 
         const [, name, command] = match;
-        registry.setAlias(name, command);
+        const trimmedCommand = command.trim(); // Trim whitespace
+        registry.setAlias(name, trimmedCommand);
 
         // Save to filesystem
         const current = fs.cat('/configuration/aliases.txt');
         const lines = current.split('\n').filter(l => !l.startsWith(name + '=') && l.trim() && !l.startsWith('#'));
-        lines.push(`${name}=${command}`);
+        lines.push(`${name}=${trimmedCommand}`);
         fs.write('/configuration/aliases.txt', lines.join('\n'));
 
-        return `Alias '${name}' set to '${command}'`;
+        return `Alias '${name}' set to '${trimmedCommand}'`;
     }, 'Create or list aliases', 'alias [name=command]', 'System');
 
     registry.register('set', (args) => {
