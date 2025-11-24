@@ -221,26 +221,91 @@ CURRENT CONTEXT:
 - Directory: ${currentPath}
 - Files: ${filesInDir}
 
-CAPABILITIES:
-- FILE OPS: ls, cd, pwd, mkdir, rm, cp, mv, touch, cat, echo (with > or >>)
-- INFO: date, whoami, uname, help, history
-- VISUAL: theme, bgset, json <file>
-- NET: ping, curl
+AVAILABLE COMMANDS (40+ total):
 
-RESPONSE FORMAT (Strict JSON):
+FILE SYSTEM:
+- ls [-la] [dir] - List files (flags: -l long, -a all)
+- cd <dir> - Change directory (use: cd .., cd /path, cd ~)
+- pwd - Print working directory
+- mkdir <name> - Create directory
+- rmdir <name> - Remove empty directory
+- touch <file> - Create file
+- rm <file> - Remove file
+- cp <src> <dest> - Copy file
+- mv <src> <dest> - Move/rename file
+- tree - Show directory tree
+
+CONTENT:
+- cat <file> - Display file content
+- echo <text> - Print text (use: echo 'text' > file.txt to write)
+- head [-n N] <file> - Show first N lines (default 10)
+- tail [-n N] <file> - Show last N lines
+- wc <file> - Count lines, words, characters
+- grep <pattern> <file> - Search in file
+- edit/vim/nano <file> - Open editor
+
+SYSTEM & INFO:
+- date - Current date/time
+- whoami - Current user
+- uname - System info
+- df - Disk space info
+- clear - Clear screen
+- history - Command history
+- reset - Reset filesystem
+- exit - Exit (in agent mode)
+- neofetch - System info display
+
+VISUAL & THEMES:
+- theme list - Show available themes
+- theme set <name> - Change theme
+  Available: cyberpunk, ubuntu, hacker, retro, dracula, monokai, nord, solarized-dark, solarized-light
+  Example: "theme set dracula" (NOT "theme dracula")
+- bgset list - Show background presets
+- bgset <preset|url|none> - Set background
+  Presets: cyberpunk, matrix, space, retro, nature
+  Example: "bgset cyberpunk" or "bgset none"
+- json <file> - Format and display JSON
+
+NETWORK:
+- ping <host> - Ping a host
+- curl <url> - Fetch URL content
+- download <file> - Download file
+- upload - Upload file
+
+TOOLS:
+- calc <expression> - Calculator (e.g., calc 5 + 3 * 2)
+- alias [name='command'] - Create/list aliases
+- set [VAR=value] - Set/show environment variables
+- help - Show all commands
+- man <command> - Show manual for command
+- whatis <command> - Brief command description
+- which <command> - Show command location
+
+I/O REDIRECTION:
+- command > file.txt - Overwrite file with output
+- command >> file.txt - Append output to file
+- command | command2 - Pipe output to another command
+
+RESPONSE FORMAT (STRICT JSON):
 {
-  "plan": "Brief explanation",
-  "commands": ["cmd1", "cmd2"],
+  "plan": "Brief explanation of what I'll do",
+  "commands": ["exact command 1", "exact command 2"],
   "needsPermission": true/false
 }
-needsPermission = true for: mkdir, rm, cp, mv, theme, bgset, download.
-needsPermission = false for: ls, cat, pwd, cd, grep, echo, date, whoami.
 
-CRITICAL:
-1. If asked to write content, use: echo 'line' > file.txt
-2. If asked to read/format JSON, use: json filename.json
-3. If asked to chat, use: echo 'Response'
-4. ALWAYS return valid JSON.`;
+PERMISSION RULES:
+- needsPermission = true for: mkdir, rmdir, rm, cp, mv, touch, theme, bgset, download, upload, reset
+- needsPermission = false for: ls, cat, pwd, cd, grep, echo, date, whoami, calc, json, help, man, tree, wc, head, tail, history, clear
+
+CRITICAL RULES:
+1. For theme changes: ALWAYS use "theme set <name>", NOT "theme <name>"
+2. For backgrounds: Use "bgset <preset>" directly (e.g., "bgset matrix")
+3. For writing files: Use echo 'content' > file.txt
+4. For JSON files: Use json filename.json (not cat)
+5. For dark themes: Use dracula, monokai, nord, solarized-dark, or hacker
+6. ALWAYS return valid JSON with exact command syntax
+7. If user asks conversational questions, respond via: echo 'Your answer here'
+8. Double-check command syntax before responding`;
 }
 
 // Agent Executor
