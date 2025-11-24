@@ -462,7 +462,7 @@ export class VimEditor {
     render() {
         // Update line numbers
         this.lineNumbers.innerHTML = this.lines.map((_, i) =>
-            `<div style="line-height: 1.5;">${i + 1}</div>`
+            `<div style="padding: 2px 0;">${i + 1}</div>`
         ).join('');
 
         // Update content - always render with cursor
