@@ -23,8 +23,8 @@ export class FileSystem {
         }
     }
 
-    _initializeDefaultFileSystem() {
-        this.root = {
+    _createDefaultRoot() {
+        return {
             type: 'dir',
             name: '/',
             children: {
@@ -75,11 +75,10 @@ For help: help | man <command> | whatis <command>`,
                             type: 'file',
                             name: 'welcome.txt',
                             content: `Hi, I'm Ritu Raj.
-I'm a Data Science student at IIT Madras on a mission to transform complex data into meaningful stories and intelligent solutions.
-
-My journey combines rigorous academic training with hands-on project experience, allowing me to bridge the gap between theoretical concepts and real-world impact.
-
-What drives me is the excitement of uncovering hidden patterns in data and building systems that learn and adapt. Whether it's predicting outcomes, automating decisions, or visualizing insights, I approach each challenge with curiosity and a commitment to creating solutions that matter.`,
+                            for more information visit my portfolio website : www.riturajprofile.me.
+                            github : github.com/riturajprofile
+                            linkedin : linkedin.com/in/riturajprofile
+                            `,
                             metadata: { size: 512, created: Date.now(), modified: Date.now() }
                         }
                     }
@@ -127,8 +126,20 @@ c=clear
                 }
             }
         };
+    }
+
+    _initializeDefaultFileSystem() {
+        this.root = this._createDefaultRoot();
         this.currentPath = ['home'];
         this.previousPath = ['home'];
+    }
+
+    reset() {
+        localStorage.removeItem('minai_fs_v3');
+        localStorage.removeItem('minai_fs_v2');
+        this._initializeDefaultFileSystem();
+        this._persist();
+        return 'File system reset to default state. All user data cleared.';
     }
 
     _migrateFileSystem() {
@@ -619,14 +630,16 @@ EXAMPLES
     theme set ubuntu        Switch to Ubuntu theme
     theme set cyberpunk     Switch to Cyberpunk theme`,
 
-            'cmatrix': `Command: cmatrix - Matrix digital rain effect
-
+            'upload': `Command: upload - Upload file from system
+            
 SYNOPSIS
-    cmatrix
+    upload
 
 DESCRIPTION
-    Displays the "digital rain" effect from The Matrix.
-    Press any key to exit.`,
+    Opens system file picker to upload a file to the current directory.
+    Supports text files and images.`,
+
+
 
             'neofetch': `Command: neofetch - System information
 
@@ -956,6 +969,7 @@ DESCRIPTION
 
         const { parent, name, node, error } = this._resolveAbsolutePath(path);
         if (error) return error;
+        if (!node) return `No such file or directory: ${path}`;
         if (!parent) return 'Permission denied';
         if (node.metadata?.readonly) {
             return `Permission denied: ${path} is read-only`;
@@ -990,6 +1004,7 @@ DESCRIPTION
 
         const { parent, name, node, error } = this._resolveAbsolutePath(path);
         if (error) return error;
+        if (!node) return `No such file or directory: ${path}`;
         if (node.type !== 'dir') return `Not a directory: ${path}`;
         if (Object.keys(node.children).length > 0) return `Directory not empty: ${path}`;
 
@@ -1108,10 +1123,11 @@ export class CommandParser {
         };
         this.validCommands = [
             'ls', 'cd', 'pwd', 'mkdir', 'rmdir', 'touch', 'rm', 'cp', 'mv', 'tree',
-            'cat', 'echo', 'head', 'tail', 'wc', 'grep', 'edit', 'nano', 'vim',
-            'date', 'whoami', 'uname', 'df', 'clear', 'help', 'man', 'history',
-            'download', 'alias', 'set', 'exit', 'chat', '/config', '/chat',
-            'whatis', 'which', 'ai', 'ping', 'curl', 'calc', 'theme', 'cmatrix', 'neofetch', 'bgset', 'json'
+            'cat', 'echo', 'head', 'tail', 'wc', 'grep',
+            'date', 'whoami', 'uname', 'df', 'clear', 'history',
+            'whatis', 'which', 'help', 'man',
+            'download', 'ping', 'curl', 'calc', 'theme', 'bgset', 'neofetch', 'json',
+            'edit', 'nano', 'vim', 'exit', 'ai', 'alias', 'set', 'upload', 'reset'
         ];
 
         // Load aliases from configuration file
@@ -1401,8 +1417,8 @@ export class CommandParser {
             case 'pwd': output = this.fs.pwd(); break;
             case 'mkdir': output = this.fs.mkdir(params[0]); break;
             case 'rmdir': output = this.fs.rmdir(params[0]); break;
-            case 'touch': output = this.fs.touch(params[0]); break;
-            case 'rm': output = this.fs.rm(params[0], flags); break;
+            case 'touch': output = params.map(p => this.fs.touch(p)).filter(r => r).join('\n'); break;
+            case 'rm': output = params.map(p => this.fs.rm(p, flags)).filter(r => r).join('\n'); break;
             case 'cp': output = this.fs.cp(params[0], params[1], flags); break;
             case 'mv': output = this.fs.mv(params[0], params[1]); break;
             case 'tree': output = this.fs.tree(); break;
@@ -1436,7 +1452,9 @@ export class CommandParser {
             case 'calc': output = this._calc(params); break;
             case 'theme': output = this._theme(params); break;
             case 'bgset': output = this._bgset(params); break;
-            case 'cmatrix': this.ui.toggleMatrix(); return;
+            case 'upload': this._upload(); return;
+            case 'reset': output = this.fs.reset(); break;
+
             case 'neofetch':
                 output = this._neofetch();
                 break;
@@ -1717,99 +1735,52 @@ export class CommandParser {
         return 'Usage: theme [list | set <name>]';
     }
 
-    _bgset(params) {
-        // Preset backgrounds for each theme
-        const presets = {
-            'cyberpunk': 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1920&q=80',
-            'cyberpunk-alt': 'https://images.unsplash.com/photo-1563089145-599997674d42?w=1920&q=80',
-            'hacker': 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1920&q=80',
-            'matrix': 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=1920&q=80',
-            'neon-city': 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1920&q=80',
-            'tokyo-night': 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1920&q=80',
-            'nord': 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=1920&q=80',
-            'retro': 'https://images.unsplash.com/photo-1579547621113-e4bb2a19bdd6?w=1920&q=80',
-            'space': 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1920&q=80',
-            'abstract': 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1920&q=80',
-            'mountains': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80',
-            'ocean': 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1920&q=80',
-            'forest': 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80',
-            'gradient': 'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=1920&q=80'
-        };
+    _bgset(args) {
+        if (args.length === 0) return 'Usage: bgset [preset|url|none|list]';
+        const arg = args[0];
 
-        if (params.length === 0) {
-            return `Usage: bgset [preset|url|none|list]
-
-Examples:
-  bgset cyberpunk       Use cyberpunk preset
-  bgset list            Show all presets  
-  bgset https://...     Use custom URL
-  bgset none            Remove background`;
-        }
-
-        const input = params[0];
-
-        // List presets
-        if (input === 'list') {
-            let output = 'Available background presets:\n\n';
-            output += '🌆 Theme Matched:\n';
-            output += '  cyberpunk, cyberpunk-alt, hacker, matrix\n';
-            output += '  neon-city, tokyo-night, nord, retro\n\n';
-            output += '🌍 Nature:\n';
-            output += '  mountains, ocean, forest\n\n';
-            output += '🎨 Abstract:\n';
-            output += '  space, abstract, gradient\n\n';
-            output += 'Usage: bgset <preset-name>';
-            return output;
-        }
-
-        // Remove background
-        if (input === 'none') {
+        if (arg === 'none') {
             document.documentElement.style.setProperty('--bg-image', 'none');
             localStorage.setItem('minai_bg', 'none');
-            return 'Background image removed';
+            return 'Background removed.';
         }
 
-        // Check if it's a preset
-        if (presets[input]) {
-            const url = presets[input];
-            this.ui.print('Loading background image...', 'system');
-
-            // Preload image
-            const img = new Image();
-            img.onload = () => {
-                document.documentElement.style.setProperty('--bg-image', `url('${url}')`);
-                localStorage.setItem('minai_bg', url);
-                this.ui.print(`✓ Background loaded: ${input}`, 'system');
-            };
-            img.onerror = () => {
-                this.ui.print(`✗ Failed to load image. Check your internet connection.`, 'error');
-            };
-            img.src = url;
-
-            return '';
+        if (arg === 'list') {
+            return 'Presets: cyberpunk, matrix, space, retro, nature';
         }
 
-        // Treat as custom URL
-        const url = input;
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-            this.ui.print('Loading background image...', 'system');
+        const presets = {
+            'cyberpunk': 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=1920&q=80',
+            'matrix': 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1920&q=80',
+            'space': 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80',
+            'retro': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1920&q=80',
+            'nature': 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1920&q=80'
+        };
 
-            // Preload image
-            const img = new Image();
-            img.onload = () => {
-                document.documentElement.style.setProperty('--bg-image', `url('${url}')`);
-                localStorage.setItem('minai_bg', url);
-                this.ui.print(`✓ Background loaded from: ${url}`, 'system');
-            };
-            img.onerror = () => {
-                this.ui.print(`✗ Failed to load image from URL. Check the URL and CORS permissions.`, 'error');
-            };
-            img.src = url;
+        const url = presets[arg] || arg;
+        const cssValue = `url('${url}')`;
 
-            return '';
-        }
+        document.documentElement.style.setProperty('--bg-image', cssValue);
+        localStorage.setItem('minai_bg', url);
+        return `Background set to ${arg}`;
+    }
 
-        return `Invalid input. Use 'bgset list' to see presets, or provide a valid https:// URL.`;
+    _upload() {
+        this.ui.triggerUpload((filename, content) => {
+            // Sanitize filename: replace spaces with underscores
+            const safeFilename = filename.replace(/\s+/g, '_');
+
+            const result = this.fs.write(safeFilename, content);
+            if (result) {
+                this.ui.print(`Error uploading ${safeFilename}: ${result}`, 'error');
+            } else {
+                this.ui.print(`Successfully uploaded ${safeFilename}`, 'system');
+                // If it's an image, show a preview
+                if (content.startsWith('data:image/')) {
+                    this.ui.print(`<img src="${content}" style="max-width: 300px; border: 1px solid #33ff00; margin-top: 10px;">`, 'system');
+                }
+            }
+        });
     }
 
     _neofetch() {
@@ -1872,7 +1843,7 @@ Examples:
         const categories = {
             'File System': ['ls', 'cd', 'pwd', 'mkdir', 'rmdir', 'touch', 'rm', 'cp', 'mv', 'tree'],
             'Content': ['cat', 'echo', 'head', 'tail', 'wc', 'grep', 'edit', 'vim'],
-            'System': ['date', 'whoami', 'uname', 'clear', 'download', 'history', 'exit', 'ping', 'curl', 'theme', 'cmatrix', 'neofetch'],
+            'System': ['date', 'whoami', 'uname', 'clear', 'download', 'upload', 'history', 'exit', 'ping', 'curl', 'theme', 'neofetch', 'reset'],
             'Tools': ['calc', 'json'],
             'Info & Config': ['whatis', 'which', 'man', 'help', 'alias', 'set', '/config'],
             'AI': ['ai (switch to Agent mode ✨)']
@@ -2056,9 +2027,13 @@ Examples:
                 usage: 'theme [list | set <name>]',
                 example: 'theme set ubuntu'
             },
-            'cmatrix': {
-                desc: 'Matrix digital rain effect',
-                usage: 'cmatrix'
+            'upload': {
+                desc: 'Upload a file from your computer',
+                usage: 'upload'
+            },
+            'reset': {
+                desc: 'Reset file system to default state',
+                usage: 'reset'
             },
             'neofetch': {
                 desc: 'System information',

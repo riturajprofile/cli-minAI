@@ -1,203 +1,23 @@
 import { AIClient } from './ai.js';
 import { FileSystem, CommandParser } from './terminal.js';
-import { VimEditor } from './vim-editor.js';
+import { state, trackDirectory, getDirectorySuggestions } from './modules/state.js';
 
-// State management
-const state = {
-    chatMode: false,
-    configOpen: false,
-    history: [],
-    historyIndex: -1,
-    path: ['home'],
-    currentMode: 'sh', // 'sh' or 'agent'
+import { elements, uiHandler, openSettings, closeSettings, saveSettings } from './modules/ui.js';
 
-    // Confirmation Handling
-    waitingForConfirmation: false,
-    confirmationResolver: null,
-
-    // Directory Tracking
-    dirHistory: JSON.parse(localStorage.getItem('minai_dir_history') || '{}'),
-    suggestions: [],
-    suggestionIndex: 0,
-
-    // API Configuration (Load once on start)
-    apiKey: localStorage.getItem('openai_api_key') || '',
-    baseUrl: localStorage.getItem('openai_base_url') || 'https://aipipe.org/openrouter/v1/chat/completions',
-    isLoading: false
-};
-
-// Directory tracking - like zoxide
-function trackDirectory(path) {
-    const now = Date.now();
-    if (!state.dirHistory[path]) {
-        state.dirHistory[path] = { count: 0, lastVisit: now };
-    }
-    state.dirHistory[path].count++;
-    state.dirHistory[path].lastVisit = now;
-    localStorage.setItem('minai_dir_history', JSON.stringify(state.dirHistory));
-}
-
-function getDirectorySuggestions(partial) {
-    const now = Date.now();
-    const scores = Object.entries(state.dirHistory).map(([path, data]) => {
-        const ageHours = (now - data.lastVisit) / (1000 * 60 * 60);
-        const recencyMultiplier = Math.max(0.25, 1 / (1 + ageHours / 24));
-        const frecency = data.count * recencyMultiplier;
-        return { path, frecency };
-    });
-
-    return scores
-        .filter(s => !partial || s.path.includes(partial))
-        .sort((a, b) => b.frecency - a.frecency)
-        .slice(0, 5)
-        .map(s => s.path);
-}
-
-// DOM elements
-const elements = {
-    input: document.getElementById('commandInput'),
-    output: document.getElementById('output'),
-    prompt: document.getElementById('promptText'),
-    modeBtns: document.querySelectorAll('.mode-btn'),
-    settingsModal: document.getElementById('settingsModal'),
-    apiKeyInput: document.getElementById('apiKey'),
-    baseUrlInput: document.getElementById('baseUrl'),
-    providerSelect: document.getElementById('provider'),
-    saveSettingsBtn: document.getElementById('saveSettings'),
-    closeSettingsBtn: document.getElementById('closeSettings'),
-    editorModal: document.getElementById('editorModal'),
-    editorContent: document.getElementById('editorContent'),
-    editorTitle: document.getElementById('editorTitle')
-};
-
-// Vim Editor instance
-let vimEditor = null;
-
-// Matrix Effect
-class MatrixEffect {
-    constructor(canvasId) {
-        this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext('2d');
-        this.active = false;
-        this.interval = null;
-        this.chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()';
-        this.fontSize = 14;
-        this.columns = 0;
-        this.drops = [];
-
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-    }
-
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.columns = this.canvas.width / this.fontSize;
-        this.drops = [];
-        for (let i = 0; i < this.columns; i++) {
-            this.drops[i] = 1;
-        }
-    }
-
-    draw() {
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.fillStyle = '#0F0';
-        this.ctx.font = this.fontSize + 'px monospace';
-
-        for (let i = 0; i < this.drops.length; i++) {
-            const text = this.chars.charAt(Math.floor(Math.random() * this.chars.length));
-            this.ctx.fillText(text, i * this.fontSize, this.drops[i] * this.fontSize);
-
-            if (this.drops[i] * this.fontSize > this.canvas.height && Math.random() > 0.975) {
-                this.drops[i] = 0;
-            }
-            this.drops[i]++;
-        }
-    }
-
-    start() {
-        if (this.active) return;
-        this.active = true;
-        this.canvas.style.opacity = '1';
-        this.interval = setInterval(() => this.draw(), 33);
-
-        const stopHandler = () => {
-            this.stop();
-            document.removeEventListener('keydown', stopHandler);
-            document.removeEventListener('click', stopHandler);
-        };
-        document.addEventListener('keydown', stopHandler);
-        document.addEventListener('click', stopHandler);
-    }
-
-    stop() {
-        this.active = false;
-        clearInterval(this.interval);
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.canvas.style.opacity = '0.3';
-    }
-}
-
-const matrix = new MatrixEffect('matrixCanvas');
 const fs = new FileSystem();
 
-// UI Handler
-const uiHandler = {
-    print: (text, type = 'system') => {
-        const line = document.createElement('div');
-        line.className = `line ${type}`;
-        if (type === 'user') {
-            line.textContent = text;
-        } else {
-            line.innerHTML = text;
-        }
-        elements.output.appendChild(line);
-        scrollToBottom();
-    },
-    clear: () => elements.output.innerHTML = '',
-    openSettings: () => openSettings(),
-    openEditor: (filename, content) => {
-        if (!vimEditor) {
-            vimEditor = new VimEditor(
-                elements.editorModal,
-                (fname, newContent) => {
-                    const result = fs.write(fname, newContent);
-                    uiHandler.print(result ? `Error: ${result}` : `Saved ${fname}`, result ? 'error' : 'system');
-                },
-                () => {
-                    elements.editorModal.style.display = 'none';
-                    elements.input.focus();
-                    vimEditor = null;
-                }
-            );
-        }
-        vimEditor.open(filename, content);
-        elements.editorModal.style.display = 'flex';
-    },
-    downloadFile: (filename, content) => {
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    },
-    setPrompt: (text) => {
-        if (text) elements.prompt.textContent = text;
-        else updatePrompt();
-    },
-    getHistory: () => state.history,
-    handleChat: async (content) => await handleChat(content),
-    toggleMatrix: () => matrix.start(),
-    setTheme: (themeName) => {
-        document.body.className = `theme-${themeName}`;
-        localStorage.setItem('minai_theme', themeName);
-    }
+// Assign missing methods to uiHandler that depend on local scope or specific logic
+uiHandler.handleChat = async (content) => await handleAgentRequest(content);
+// Wrap openEditor to pass fs
+const originalOpenEditor = uiHandler.openEditor;
+uiHandler.openEditor = (filename, content) => originalOpenEditor(filename, content, fs);
+// Wrap setPrompt to use updatePrompt if no text provided
+const originalSetPrompt = uiHandler.setPrompt;
+uiHandler.setPrompt = (text) => {
+    if (text) originalSetPrompt(text);
+    else updatePrompt();
 };
+
 
 // Simple Chat/Command Handler (used by CommandParser)
 const aiHandler = async (prompt) => {
@@ -221,14 +41,12 @@ const aiHandler = async (prompt) => {
 
 const parser = new CommandParser(fs, uiHandler, aiHandler);
 
-function scrollToBottom() {
-    elements.output.scrollTop = elements.output.scrollHeight;
-}
-
 function updatePrompt() {
-    const cwd = fs.pwd();
-    const displayPath = cwd === '/home' ? '~' : cwd.replace('/home', '~');
-    elements.prompt.textContent = `user@minai:${displayPath}$`;
+    const user = 'user@minai';
+    const path = state.path.join('/');
+    const dir = path === 'home' ? '~' : (path.startsWith('home/') ? '~/' + path.slice(5) : path);
+
+    uiHandler.setContext(user, dir);
 }
 
 function initializeModeSwitcher() {
@@ -240,11 +58,12 @@ function initializeModeSwitcher() {
             btn.classList.add('active');
 
             if (mode === 'agent') {
-                elements.prompt.textContent = 'AI Agent:';
+                if (elements.promptSymbol) elements.promptSymbol.textContent = '✨';
                 elements.input.placeholder = 'Ask me anything...';
                 elements.input.style.color = '#8be9fd';
             } else {
                 updatePrompt();
+                if (elements.promptSymbol) elements.promptSymbol.textContent = '❯';
                 elements.input.placeholder = "Type a command... (try 'help')";
                 elements.input.style.color = '#ffffff';
             }
@@ -335,7 +154,7 @@ async function handleInput(e) {
             }
 
             // Direct command bypass
-            const validCommands = ['ls', 'cd', 'pwd', 'mkdir', 'rm', 'cat', 'help', 'clear', 'theme', 'cmatrix'];
+            const validCommands = ['ls', 'cd', 'pwd', 'mkdir', 'rm', 'cat', 'help', 'clear', 'theme'];
             const firstWord = input.trim().split(/\s+/)[0];
             if (validCommands.includes(firstWord)) {
                 uiHandler.print(`$ ${input}`, 'user');
@@ -353,7 +172,11 @@ async function handleInput(e) {
 
         } else {
             // Shell Mode
-            uiHandler.print(`${elements.prompt.textContent} ${input}`, 'user');
+            // Shell Mode
+            const user = 'user@minai';
+            const path = state.path.join('/');
+            const dir = path === 'home' ? '~' : (path.startsWith('home/') ? '~/' + path.slice(5) : path);
+            uiHandler.print(`${user}:${dir}$ ${input}`, 'user');
             elements.input.value = '';
 
             const result = await parser.parse(input);
@@ -400,7 +223,7 @@ CURRENT CONTEXT:
 CAPABILITIES:
 - FILE OPS: ls, cd, pwd, mkdir, rm, cp, mv, touch, cat, echo (with > or >>)
 - INFO: date, whoami, uname, help, history
-- VISUAL: theme, bgset, cmatrix, json <file>
+- VISUAL: theme, bgset, json <file>
 - NET: ping, curl
 
 RESPONSE FORMAT (Strict JSON):
@@ -517,37 +340,6 @@ async function handleAgentRequest(userRequest) {
     }
 
     state.isLoading = false;
-}
-
-// Settings Logic
-function openSettings() {
-    elements.apiKeyInput.value = state.apiKey;
-    elements.baseUrlInput.value = state.baseUrl;
-
-    const options = Array.from(elements.providerSelect.options).map(o => o.value);
-    elements.providerSelect.value = options.includes(state.baseUrl) ? state.baseUrl : 'custom';
-
-    elements.settingsModal.style.display = 'flex';
-    elements.apiKeyInput.focus();
-}
-
-function closeSettings() {
-    elements.settingsModal.style.display = 'none';
-    elements.input.focus();
-}
-
-function saveSettings() {
-    const key = elements.apiKeyInput.value.trim();
-    const url = elements.baseUrlInput.value.trim();
-
-    if (key) {
-        state.apiKey = key;
-        state.baseUrl = url;
-        localStorage.setItem('openai_api_key', key);
-        localStorage.setItem('openai_base_url', url);
-        uiHandler.print('Configuration saved.', 'system');
-        closeSettings();
-    }
 }
 
 // Event Listeners
