@@ -468,9 +468,7 @@ if (!hasVisited) {
 
 ✨ PROJECT MOTTO:
    This is a fun project built using vibe coding - not a production use case,
-   but this type of functionality can be implemented in DevOps tools, CI/CD
-   pipelines, cloud management platforms, and educational environments!
-
+   but this type of functionality can be implemented in terminal ai auto-suggestion,agent mode etc.
 🚀 What is MinAI Terminal?
    A browser-based Linux-like terminal with AI intelligence built in!
    Experience the power of command-line interface with AI assistance.
