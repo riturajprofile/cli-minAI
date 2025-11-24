@@ -74,12 +74,82 @@ For help: help | man <command> | whatis <command>`,
                         'welcome.txt': {
                             type: 'file',
                             name: 'welcome.txt',
-                            content: `Hi, I'm Ritu Raj.
-                            for more information visit my portfolio website : www.riturajprofile.me.
-                            github : github.com/riturajprofile
-                            linkedin : linkedin.com/in/riturajprofile
-                            `,
-                            metadata: { size: 512, created: Date.now(), modified: Date.now() }
+                            content: `╔═══════════════════════════════════════════════════════════════╗
+║                    Welcome to MinAI Terminal!                 ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Hi, I'm Ritu Raj - Creator of MinAI Terminal 🚀
+
+QUICK START GUIDE FOR NEW USERS
+================================
+
+🔹 TWO MODES OF OPERATION:
+   1. Shell Mode (❯) - Run Linux-like commands
+   2. Agent Mode (✨) - AI-powered assistant that can execute commands
+
+🔹 GETTING STARTED:
+   • Type 'help' to see all available commands
+   • Type 'man <command>' for detailed help (e.g., man ls)
+   • Use Tab key for auto-completion
+   • Arrow Up/Down to navigate command history
+
+🔹 ESSENTIAL COMMANDS:
+   ls              - List files and directories
+   cd <dir>        - Change directory (cd .., cd ~, cd -)
+   pwd             - Show current directory
+   cat <file>      - Display file contents
+   mkdir <name>    - Create a directory
+   touch <file>    - Create a new file
+   edit <file>     - Open Vim editor
+   clear           - Clear the screen
+   tree            - View directory structure
+
+🔹 CONFIGURE AI (Required for Agent Mode):
+   • Type '/config' or 'config' to set your OpenAI API key
+   • Supports OpenAI, Groq, and custom providers
+   • Agent mode won't work without API configuration
+
+🔹 SWITCHING MODES:
+   • Click 'Agent (✨)' button OR type 'ai' to enter Agent mode
+   • In Agent mode, type 'sh' or 'exit' to return to Shell mode
+   • Agent can execute commands for you intelligently!
+
+🔹 ADVANCED FEATURES:
+   • Aliases: alias ll='ls -la' (custom shortcuts)
+   • Redirection: echo "text" > file.txt (save output)
+   • Pipes: cat file.txt | grep "search"
+   • Themes: theme set dracula (9 themes available)
+   • Backgrounds: bgset matrix (5 presets)
+
+🔹 FILE SYSTEM:
+   /home           - Your workspace (read/write)
+   /configuration  - Settings & customization
+   /command        - Command implementations
+   README          - Full documentation (cat /README)
+
+🔹 TRY THESE EXAMPLES:
+   cat /README              - Read the full manual
+   tree                     - See directory structure
+   theme list               - View available themes
+   neofetch                 - Display system info
+   calc 5 + 3 * 2          - Use the calculator
+
+═══════════════════════════════════════════════════════════════
+
+CONNECT WITH ME
+===============
+📧 Email:    riturajprofile@gmail.com
+🌐 Website:  https://www.riturajprofile.com
+💼 LinkedIn: https://www.linkedin.com/in/riturajprofile
+💻 GitHub:   https://github.com/riturajprofile
+
+Star this project on GitHub if you find it useful! ⭐
+
+═══════════════════════════════════════════════════════════════
+
+Need help? Type 'help' or 'man <command>' anytime!
+Happy coding! 🎉`,
+                            metadata: { size: 2048, created: Date.now(), modified: Date.now() }
                         }
                     }
                 },

@@ -458,7 +458,48 @@ document.addEventListener('click', (e) => {
 initializeModeSwitcher();
 updatePrompt();
 
-uiHandler.print(`Hi, I'm Ritu Raj.\ncontact: riturajprofile@gmail.com or www.riturajprofile.com\nType 'help' for commands, or click 'Agent' (✨) for AI assistance.`, 'system');
+// Check if first visit
+const hasVisited = localStorage.getItem('minai_visited');
+if (!hasVisited) {
+    // First-time visitor message
+    uiHandler.print(`╔════════════════════════════════════════════════════════════════╗
+║          Welcome to MinAI Terminal - AI-Powered CLI           ║
+╚════════════════════════════════════════════════════════════════╝
+
+🚀 What is MinAI Terminal?
+   A browser-based Linux-like terminal with AI intelligence built in!
+   Experience the power of command-line interface with AI assistance.
+
+💡 Quick Start (3 easy steps):
+   1. Type 'help' to see all 40+ available commands
+   2. Try 'cat welcome.txt' for a detailed guide
+   3. Click 'Agent (✨)' for AI-powered command execution
+
+🎯 Two Powerful Modes:
+   • Shell Mode (❯)  - Traditional command-line interface
+   • Agent Mode (✨) - AI assistant that executes commands for you
+
+⚡ Try These Now:
+   ls              - List files
+   tree            - View directory structure
+   theme list      - See available themes
+   neofetch        - System info display
+
+🔑 Optional: Configure AI (for Agent mode)
+   Type '/config' to set your OpenAI API key
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Created by Ritu Raj | riturajprofile@gmail.com
+🌐 www.riturajprofile.com | 💻 github.com/riturajprofile
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'system');
+
+    localStorage.setItem('minai_visited', 'true');
+} else {
+    // Returning visitor message
+    uiHandler.print(`Hi, I'm Ritu Raj.
+contact: riturajprofile@gmail.com | www.riturajprofile.com
+Type 'help' for commands, or click 'Agent' (✨) for AI assistance.`, 'system');
+}
 
 const savedTheme = localStorage.getItem('minai_theme');
 if (savedTheme) uiHandler.setTheme(savedTheme);
